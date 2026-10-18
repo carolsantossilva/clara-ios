@@ -1,0 +1,9 @@
+{
+  "flags": {
+    "ai_step_suggestions": true,
+    "holiday_banner": true
+  },
+  "experiments": {
+    "focus_duration": ["15", "25"]
+  }
+}

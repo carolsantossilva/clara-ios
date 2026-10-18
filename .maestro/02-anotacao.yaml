@@ -1,0 +1,14 @@
+appId: app.clara.ios
+name: Guardar uma distração para depois
+tags: [smoke]
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn:
+    id: "parking.field"
+- inputText: "Comprar pilhas"
+- tapOn:
+    id: "parking.add"
+- assertVisible: "Comprar pilhas"

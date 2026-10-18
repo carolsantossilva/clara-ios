@@ -1,0 +1,29 @@
+# Equivalente ao GitHub Actions para GitLab CI (runner macOS com tag "macos").
+stages: [lint, test, deploy]
+
+default:
+  tags: [macos]
+  before_script:
+    - bundle install
+
+lint:
+  stage: lint
+  script:
+    - swiftlint lint --strict --reporter gitlab
+
+test:
+  stage: test
+  script:
+    - bundle exec fastlane test
+  artifacts:
+    when: always
+    reports:
+      junit: fastlane/test_output/report.junit
+
+beta:
+  stage: deploy
+  script:
+    - bundle exec fastlane beta
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      when: manual

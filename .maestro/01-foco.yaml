@@ -1,0 +1,23 @@
+appId: app.clara.ios
+name: Criar a primeira tarefa e começar o foco
+tags: [smoke]
+---
+# -ui-testing: banco em memória e sem rede, então todo fluxo começa do zero.
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn:
+    id: "today.addFirstTask"
+- tapOn:
+    id: "addTask.title"
+- inputText: "Responder a clinica"
+- tapOn:
+    id: "addTask.save"
+- assertVisible:
+    id: "today.focusTitle"
+    text: "Responder a clinica"
+- tapOn:
+    id: "today.startFocus"
+- assertVisible:
+    id: "today.timer"

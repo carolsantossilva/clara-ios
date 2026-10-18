@@ -1,0 +1,17 @@
+appId: app.clara.ios
+name: Check-in diário aparece na linha do tempo
+tags: [smoke]
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn: "Registros"
+- tapOn:
+    id: "records.checkIn"
+- tapOn:
+    id: "mood.good"
+- tapOn:
+    id: "momentForm.save"
+- assertVisible:
+    id: "records.row"

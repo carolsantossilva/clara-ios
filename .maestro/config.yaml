@@ -1,0 +1,7 @@
+# Fluxos de ponta a ponta com Maestro (https://maestro.dev).
+# Rodar localmente, com o app instalado num simulador:  maestro test .maestro
+# O CI roda todos os fluxos no job "Fluxos de ponta a ponta (Maestro)".
+flows:
+  - "*.yaml"
+executionOrder:
+  continueOnFailure: true

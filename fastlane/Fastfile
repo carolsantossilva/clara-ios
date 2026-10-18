@@ -1,0 +1,49 @@
+# Automação de build, testes e distribuição.
+# Uso: bundle exec fastlane <lane>
+
+default_platform(:ios)
+
+SIMULATOR = ENV.fetch("CLARA_SIMULATOR", "iPhone 17")
+
+platform :ios do
+  desc "Gera o projeto a partir do project.yml"
+  lane :generate do
+    sh("cd .. && xcodegen generate")
+  end
+
+  desc "Análise estática com SwiftLint"
+  lane :lint do
+    swiftlint(mode: :lint, strict: true, config_file: ".swiftlint.yml")
+  end
+
+  desc "Testes unitários, de snapshot e de UI, com cobertura"
+  lane :test do
+    generate
+    run_tests(
+      project: "Clara.xcodeproj",
+      scheme: "Clara",
+      device: SIMULATOR,
+      code_coverage: true,
+      result_bundle: true,
+      output_types: "junit,html",
+      # Reexecuta só o que falhou: separa falha real de instabilidade do simulador.
+      number_of_retries: 1
+    )
+  end
+
+  desc "Build assinado e envio para o TestFlight"
+  lane :beta do
+    # Precisa de credenciais: App Store Connect API key (variáveis APP_STORE_CONNECT_*)
+    # e certificados via match. Fica como referência do pipeline de CD.
+    generate
+    api_key = app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_KEY_CONTENT")
+    )
+    match(type: "appstore", readonly: is_ci, api_key: api_key)
+    increment_build_number(build_number: latest_testflight_build_number(api_key: api_key) + 1, xcodeproj: "Clara.xcodeproj")
+    build_app(project: "Clara.xcodeproj", scheme: "Clara", export_method: "app-store")
+    upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)
+  end
+end

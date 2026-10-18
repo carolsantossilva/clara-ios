@@ -1,0 +1,10 @@
+appId: app.clara.ios
+name: Consulta mostra a prévia do resumo
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn: "Consulta"
+- assertVisible:
+    id: "consultation.preview"

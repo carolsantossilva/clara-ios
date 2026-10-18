@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       app: ${{ steps.detect.outputs.app }}
+      package: ${{ steps.detect.outputs.package }}
       maestro: ${{ steps.detect.outputs.maestro }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,6 +38,7 @@ jobs:
       - id: detect
         run: |
           echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "package=$([[ -f Packages/ClaraKit/Package.swift ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   policy:
@@ -90,7 +92,7 @@ jobs:
   lint:
     name: SwiftLint
     needs: detect
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -135,6 +137,42 @@ jobs:
           path: build/Testes.xcresult
           retention-days: 7
 
+  # Enquanto o app (project.yml) não existe, testa só o pacote. Permite PRs
+  # pequenos em pilha: cada módulo entra compilado e testado.
+  package:
+    name: Build e testes do pacote + cobertura
+    needs: [detect, lint]
+    if: needs.detect.outputs.package == 'true' && needs.detect.outputs.app != 'true'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Testes
+        working-directory: Packages/ClaraKit
+        run: |
+          set -o pipefail
+          UDID=$("$GITHUB_WORKSPACE/scripts/ci/simulator.sh")
+          xcodebuild test \
+            -scheme ClaraKit-Package \
+            -destination "id=$UDID" \
+            -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
+            -resultBundlePath "$GITHUB_WORKSPACE/build/Testes.xcresult" \
+            -enableCodeCoverage YES \
+            -skipMacroValidation \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Cobertura mínima
+        run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: resultado-dos-testes-do-pacote
+          path: build/Testes.xcresult
+          retention-days: 7
+
   maestro:
     name: Fluxos de ponta a ponta (Maestro)
     needs: [detect, lint]
@@ -174,7 +212,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
+    needs: [detect, policy, secrets, dependency-review, lint, test, package, maestro]
     runs-on: ubuntu-24.04
     steps:
       - name: Todos os jobs passaram ou foram pulados

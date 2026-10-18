@@ -206,6 +206,11 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
     for path, line_no, text in diff.added_lines:
         if not path.endswith((".swift", ".m", ".h")) or is_protected(path, prefixes):
             continue
+        # Comentário só conta se for uma diretiva (ex.: swiftlint:disable); citar
+        # `@unchecked Sendable` numa explicação não desliga nada.
+        stripped = text.strip()
+        if stripped.startswith(("//", "/*", "*")) and not re.search(r"\b(swiftlint|swiftformat):", stripped):
+            continue
         for regex, why in patterns:
             if regex.search(text):
                 hits.append((path, line_no, why, text.strip()))

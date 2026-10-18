@@ -55,9 +55,11 @@ jobs:
       - name: Verificar políticas
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # Em PR, compara com o estado atual da branch base (não com o SHA guardado no
+          # evento): em PRs empilhados, base e PR costumam ser atualizados juntos.
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE"
 
   secrets:
     name: Segredos (histórico inteiro)

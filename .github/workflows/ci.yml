@@ -1,0 +1,185 @@
+# Pipeline principal. A regra da branch main exige o job "CI OK", que só passa
+# quando todos os outros passaram (ou foram pulados por não se aplicarem).
+#
+# Segurança do próprio pipeline:
+# - Actions fixadas por SHA do commit (tag pode ser movida); o Dependabot atualiza.
+# - GITHUB_TOKEN só com leitura; checkout sem persistir credenciais.
+# - Ferramentas baixadas com versão fixa e checksum (scripts/ci/install-tools.sh).
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+
+jobs:
+  detect:
+    name: Detectar o que existe
+    runs-on: ubuntu-24.04
+    outputs:
+      app: ${{ steps.detect.outputs.app }}
+      maestro: ${{ steps.detect.outputs.maestro }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: detect
+        run: |
+          echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+  policy:
+    name: Políticas (dependências, guardrails, supressões, testes)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verificar políticas
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
+        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+
+  secrets:
+    name: Segredos (histórico inteiro)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: scripts/ci/install-tools.sh gitleaks
+      - run: gitleaks git --redact --no-banner --verbose .
+
+  dependency-review:
+    name: Revisão de dependências
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-2.0-only, GPL-3.0-only, AGPL-3.0-only
+
+  lint:
+    name: SwiftLint
+    needs: detect
+    if: needs.detect.outputs.app == 'true'
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/ci/install-tools.sh swiftlint
+      - run: swiftlint lint --strict --reporter github-actions-logging
+
+  test:
+    name: Build e testes (unitários, snapshot, UI) + cobertura
+    needs: [detect, lint]
+    if: needs.detect.outputs.app == 'true'
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/ci/install-tools.sh xcodegen swiftlint
+      - run: xcodegen generate
+      - name: Testes
+        run: |
+          set -o pipefail
+          UDID=$(scripts/ci/simulator.sh)
+          # Avisos do compilador viram erro: código gerado por IA não entra com warning.
+          xcodebuild test \
+            -project Clara.xcodeproj -scheme Clara \
+            -destination "id=$UDID" \
+            -derivedDataPath build/dd \
+            -resultBundlePath build/Testes.xcresult \
+            -enableCodeCoverage YES \
+            -skipMacroValidation \
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Cobertura mínima
+        run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: resultado-dos-testes
+          path: build/Testes.xcresult
+          retention-days: 7
+
+  maestro:
+    name: Fluxos de ponta a ponta (Maestro)
+    needs: [detect, lint]
+    if: needs.detect.outputs.app == 'true' && needs.detect.outputs.maestro == 'true'
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - run: scripts/ci/install-tools.sh xcodegen maestro
+      - run: xcodegen generate
+      - name: Build para o simulador
+        run: |
+          set -o pipefail
+          UDID=$(scripts/ci/simulator.sh)
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcodebuild build \
+            -project Clara.xcodeproj -scheme Clara \
+            -destination "id=$UDID" \
+            -derivedDataPath build/dd \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Rodar fluxos
+        run: |
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl install "$UDID" build/dd/Build/Products/Debug-iphonesimulator/Clara.app
+          maestro --device "$UDID" test .maestro --format junit --output build/maestro.xml --test-output-dir build/maestro
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: maestro
+          path: build/maestro
+          retention-days: 7
+
+  ci-ok:
+    name: CI OK
+    if: always()
+    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Todos os jobs passaram ou foram pulados
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Resultados: $RESULTS"
+          [[ "$RESULTS" != *failure* && "$RESULTS" != *cancelled* ]]

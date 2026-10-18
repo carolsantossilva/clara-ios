@@ -1,0 +1,5 @@
+{
+  "_comment": "Mínimos do CI. Só sobem: começar perto do valor atual e aumentar aos poucos.",
+  "min_line_coverage": 0.50,
+  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"]
+}

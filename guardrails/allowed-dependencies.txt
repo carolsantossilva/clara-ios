@@ -1,0 +1,6 @@
+# Dependências externas permitidas. Uma por linha: <ecossistema> <identificador>.
+# Proteção contra "slopsquatting": a IA pode sugerir pacotes que não existem ou
+# que têm nome parecido com o original. Toda dependência nova precisa ser
+# conferida por uma pessoa e adicionada aqui (arquivo protegido).
+swift https://github.com/pointfreeco/swift-snapshot-testing
+gem fastlane

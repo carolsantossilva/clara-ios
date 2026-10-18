@@ -1,0 +1,24 @@
+# Gerado pelo XcodeGen
+*.xcodeproj
+App/Info.plist
+
+# Xcode / SPM
+DerivedData/
+.build/
+.swiftpm/
+*.xcuserstate
+xcuserdata/
+
+# Fastlane
+fastlane/report.xml
+fastlane/test_output/
+fastlane/README.md
+*.ipa
+*.dSYM.zip
+
+.DS_Store
+vendor/
+
+# Saídas de build do CI e ferramentas locais
+build/
+.claude/settings.local.json

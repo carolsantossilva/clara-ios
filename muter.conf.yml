@@ -1,0 +1,15 @@
+# Configuração do Muter (teste de mutação). Usado por .github/workflows/mutation.yml.
+executable: /usr/bin/xcodebuild
+arguments:
+  - test
+  - -project
+  - Clara.xcodeproj
+  - -scheme
+  - Clara
+  - -destination
+  - platform=iOS Simulator,name=iPhone 17
+  - -skipMacroValidation
+  - CODE_SIGNING_ALLOWED=NO
+exclude:
+  - Packages/ClaraKit/Tests
+  - AppUITests

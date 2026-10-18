@@ -1,0 +1,14 @@
+# Padrões que desligam uma verificação. Adicionar qualquer um deles num PR
+# exige o label "guardrail-exception" (decisão humana, com justificativa no PR).
+# Formato: <regex Python>\t<explicação>
+swiftlint:disable	desliga regra do SwiftLint
+swiftformat:disable	desliga o SwiftFormat
+@(Test|Suite)\b.*\.disabled\(	desativa um teste do Swift Testing
+XCTSkip	pula um teste XCTest
+withKnownIssue	marca falha de teste como esperada
+@unchecked\s+Sendable	desliga a checagem de concorrência do compilador
+nonisolated\(unsafe\)	desliga a checagem de isolamento
+@preconcurrency	suprime avisos de concorrência de um import
+\bisRecording\s*=\s*true	regrava referências de snapshot
+record:\s*\.(all|missing|failed)	regrava referências de snapshot
+\btry!	pode derrubar o app em tempo de execução

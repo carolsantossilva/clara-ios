@@ -1,0 +1,53 @@
+# Regras de análise estática. Roda no build (script do Xcode) e no CI.
+included:
+  - App
+  - AppUITests
+  - Packages/ClaraKit/Sources
+  - Packages/ClaraKit/Tests
+excluded:
+  - Packages/ClaraKit/.build
+  - "**/__Snapshots__"
+
+opt_in_rules:
+  - closure_spacing
+  - empty_count
+  - first_where
+  - redundant_nil_coalescing
+  - toggle_bool
+  - weak_delegate
+
+disabled_rules:
+  - todo
+  - trailing_comma # vírgula final em listas multilinha deixa os diffs menores
+
+line_length:
+  warning: 160
+  error: 220
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 300
+
+function_body_length:
+  warning: 80
+
+cyclomatic_complexity:
+  ignores_case_statements: true
+
+# Os modelos VIP usam namespaces (Records.Load.Response).
+nesting:
+  type_level: 3
+
+file_length:
+  warning: 500
+
+identifier_name:
+  excluded: [id, t0]
+
+custom_rules:
+  no_print:
+    name: "Sem print()"
+    regex: "^\\s*print\\("
+    message: "Use os.Logger ou o CrashReporter em vez de print()."
+    severity: warning

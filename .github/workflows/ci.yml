@@ -136,6 +136,15 @@ jobs:
           name: resultado-dos-testes
           path: build/Testes.xcresult
           retention-days: 7
+      # Snapshot sem referência (ou diferente) grava a imagem nova e falha.
+      # As imagens viram artefato para uma pessoa conferir e commitar.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: snapshots
+          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
+          if-no-files-found: ignore
+          retention-days: 7
 
   # Enquanto o app (project.yml) não existe, testa só o pacote. Permite PRs
   # pequenos em pilha: cada módulo entra compilado e testado.
@@ -171,6 +180,13 @@ jobs:
         with:
           name: resultado-dos-testes-do-pacote
           path: build/Testes.xcresult
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: snapshots-do-pacote
+          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
+          if-no-files-found: ignore
           retention-days: 7
 
   maestro:

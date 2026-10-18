@@ -18,23 +18,35 @@ let package = Package(
         .library(name: "ClaraCore", targets: ["ClaraCore"]),
         .library(name: "ClaraStorage", targets: ["ClaraStorage"]),
         .library(name: "ClaraNetworking", targets: ["ClaraNetworking"]),
+        .library(name: "ClaraServices", targets: ["ClaraServices"]),
+        .library(name: "ClaraAI", targets: ["ClaraAI"]),
+        .library(name: "ClaraLegacy", targets: ["ClaraLegacy"]),
     ],
     targets: [
         // MARK: Base
         .target(name: "ClaraCore", swiftSettings: swiftSettings),
+        .target(name: "ClaraLegacy"), // Objective-C
         .target(name: "ClaraNetworking", swiftSettings: swiftSettings),
         .target(name: "ClaraStorage", dependencies: ["ClaraCore"], swiftSettings: swiftSettings),
+        .target(
+            name: "ClaraServices",
+            dependencies: ["ClaraCore", "ClaraNetworking", "ClaraLegacy"],
+            swiftSettings: swiftSettings
+        ),
+        .target(name: "ClaraAI", dependencies: ["ClaraCore"], swiftSettings: swiftSettings),
 
         // MARK: Testes
         // Dublês compartilhados (fakes, spies, relógio imediato) para não duplicar em cada suíte.
         .target(
             name: "ClaraTestSupport",
-            dependencies: ["ClaraCore", "ClaraNetworking"],
+            dependencies: ["ClaraCore", "ClaraNetworking", "ClaraServices", "ClaraAI"],
             swiftSettings: swiftSettings
         ),
         .testTarget(name: "ClaraCoreTests", dependencies: ["ClaraCore", "ClaraTestSupport"]),
         .testTarget(name: "ClaraStorageTests", dependencies: ["ClaraStorage", "ClaraCore", "ClaraTestSupport"]),
         .testTarget(name: "ClaraNetworkingTests", dependencies: ["ClaraNetworking"]),
+        .testTarget(name: "ClaraServicesTests", dependencies: ["ClaraServices", "ClaraCore", "ClaraTestSupport"]),
+        .testTarget(name: "ClaraAITests", dependencies: ["ClaraAI", "ClaraTestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )

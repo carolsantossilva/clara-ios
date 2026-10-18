@@ -45,6 +45,7 @@ done
 
 if [[ -n "${GITHUB_PATH:-}" ]]; then
   echo "$BIN" >> "$GITHUB_PATH"
-  for dir in "${EXTRA_PATHS[@]}"; do echo "$dir" >> "$GITHUB_PATH"; done
+  # Forma compatível com o bash 3.2 do macOS, que trata array vazio como não definido.
+  for dir in ${EXTRA_PATHS[@]+"${EXTRA_PATHS[@]}"}; do echo "$dir" >> "$GITHUB_PATH"; done
 fi
 echo "Ferramentas em $BIN"

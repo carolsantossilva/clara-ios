@@ -33,7 +33,8 @@ struct LocalRepositoriesTests {
         #expect(paused?.revision == 2)
         #expect(paused?.whereStopped == "documentos")
 
-        try await repository.setState(id: task.id, .done)
+        let done = try await repository.setState(id: task.id, .done)
+        #expect(done?.state == .done)
         #expect(try await repository.listOpen().isEmpty)
     }
 

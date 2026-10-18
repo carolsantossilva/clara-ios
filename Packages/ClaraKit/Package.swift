@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "ClaraLegacy", targets: ["ClaraLegacy"]),
         .library(name: "ClaraDesignSystem", targets: ["ClaraDesignSystem"]),
         .library(name: "TodayFeature", targets: ["TodayFeature"]),
+        .library(name: "RecordsFeature", targets: ["RecordsFeature"]),
     ],
     targets: [
         // MARK: Base
@@ -44,6 +45,11 @@ let package = Package(
             dependencies: ["ClaraCore", "ClaraDesignSystem", "ClaraAI", "ClaraServices", "ClaraLegacy"],
             swiftSettings: swiftSettings
         ),
+        .target(
+            name: "RecordsFeature",
+            dependencies: ["ClaraCore", "ClaraDesignSystem", "ClaraServices"],
+            swiftSettings: swiftSettings
+        ),
 
         // MARK: Testes
         // Dublês compartilhados (fakes, spies, relógio imediato) para não duplicar em cada suíte.
@@ -60,6 +66,10 @@ let package = Package(
         .testTarget(
             name: "TodayFeatureTests",
             dependencies: ["TodayFeature", "ClaraCore", "ClaraAI", "ClaraServices", "ClaraStorage", "ClaraTestSupport"]
+        ),
+        .testTarget(
+            name: "RecordsFeatureTests",
+            dependencies: ["RecordsFeature", "ClaraCore", "ClaraStorage", "ClaraTestSupport"]
         ),
     ],
     swiftLanguageModes: [.v5]

@@ -2,72 +2,7 @@ import ClaraCore
 import ClaraTestSupport
 import Foundation
 import Testing
-@testable import ClaraServices
-
-@Suite("Feature flags and A/B")
-@MainActor
-struct FeatureFlagsTests {
-    @Test("A/B assignment is stable for the same installation")
-    func bucketingIsDeterministic() {
-        let variants = ["15", "25"]
-        let first = Bucketing.variant(for: "focus_duration", installationID: "abc", variants: variants)
-        for _ in 0..<100 {
-            #expect(Bucketing.variant(for: "focus_duration", installationID: "abc", variants: variants) == first)
-        }
-    }
-
-    @Test("assignment spreads installations across variants")
-    func bucketingSpreadsUsers() {
-        let counts = (0..<1_000).reduce(into: [String: Int]()) { counts, index in
-            let variant = Bucketing.variant(for: "focus_duration", installationID: "install-\(index)", variants: ["15", "25"])
-            counts[variant ?? "nil", default: 0] += 1
-        }
-        // Wide tolerance on purpose: the test checks distribution, not luck.
-        #expect((350...650).contains(counts["15", default: 0]))
-    }
-
-    @Test("local override beats remote, which beats the default")
-    func overridePrecedence() {
-        let flags = FeatureFlags(config: RemoteConfig(flags: ["holiday_banner": false], experiments: [:]))
-        #expect(!flags.isEnabled(.holidayBanner))
-        #expect(flags.isEnabled(.aiStepSuggestions), "missing remotely → uses the bundled default")
-
-        flags.overrides[.holidayBanner] = true
-        #expect(flags.isEnabled(.holidayBanner))
-    }
-
-    @Test("without an installation ID, uses the first variant (control)")
-    func controlWithoutInstallationID() {
-        let flags = FeatureFlags(config: RemoteConfig(flags: [:], experiments: ["focus_duration": ["15", "25"]]))
-        #expect(flags.variant(.focusDuration) == "15")
-    }
-}
-
-@Suite("Remote config")
-struct RemoteConfigLoaderTests {
-    @Test("network failed and no cache: uses the default values")
-    func fallsBackToDefaults() async {
-        let client = FakeHTTPClient { _ in throw TestError() }
-        let loader = RemoteConfigLoader(client: client, path: "/config.json", cacheSuiteName: "test-\(UUID().uuidString)")
-
-        let (config, source) = await loader.load()
-
-        #expect(config == .defaults)
-        #expect(source == .defaults)
-    }
-
-    @Test("network failed after a success: uses the last saved value")
-    func fallsBackToCache() async {
-        let suite = "test-\(UUID().uuidString)"
-        let remote = RemoteConfig(flags: ["holiday_banner": false], experiments: [:])
-        _ = await RemoteConfigLoader(client: FakeHTTPClient { _ in remote }, path: "/c", cacheSuiteName: suite).load()
-
-        let (config, source) = await RemoteConfigLoader(client: FakeHTTPClient { _ in throw TestError() }, path: "/c", cacheSuiteName: suite).load()
-
-        #expect(config == remote)
-        #expect(source == .cache)
-    }
-}
+@testable import ClaraInfrastructure
 
 @Suite("Holidays (BrasilAPI)")
 struct HolidayServiceTests {
@@ -107,7 +42,7 @@ struct AnalyticsTests {
     @Test("without consent, nothing is sent")
     func respectsConsent() {
         let buffer = AnalyticsEventBuffer()
-        let service = AnalyticsService(destinations: [AnyAnalyticsDestination(BufferAnalyticsDestination(buffer: buffer))], hasConsent: false)
+        let service = AnalyticsService(buffer: buffer, hasConsent: false)
 
         service.track(.taskCompleted)
         #expect(buffer.events.isEmpty)

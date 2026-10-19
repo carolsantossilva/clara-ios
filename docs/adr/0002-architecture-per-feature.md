@@ -1,26 +1,24 @@
-# ADR 0002 — One presentation architecture per feature, chosen by the problem
+# ADR 0002 — SwiftUI and MVVM for every feature
 
-**Status:** accepted
+**Status:** accepted (replaces the original mixed presentation architectures)
 
 ## Context
 
-Choosing the right architecture is a matter of trade-offs. In large apps, different patterns commonly live side by side (older code in MVC/VIP, newer code in SwiftUI). Clara's three screens have different needs.
+The original app combined MVVM-C, UIKit with VIP and plain MVVM. Three presentation patterns made a small application harder to follow and required routing protocols and wiring tests without corresponding product complexity.
 
 ## Decision
 
-| Feature | Pattern | Why |
-|---|---|---|
-| Today | SwiftUI + **MVVM-C** | Several sheets and flows (create, pause, AI suggestions, privacy). The Coordinator takes navigation out of the ViewModel, which stays testable with a spy router. |
-| Records | UIKit View Code + **VIP** | A list with editing and deletion, concurrency rules (revision conflicts) and formatting. VIP separates rules (Interactor), formatting (Presenter) and UI (ViewController), and each part is tested in isolation. It also stands for the "legacy" UIKit part that lives alongside SwiftUI. |
-| Consultation | SwiftUI + **MVVM** without a coordinator | A single screen with no navigation. A coordinator here would be ceremony with no gain. |
+All screens use SwiftUI and MVVM:
 
-## Trade-offs
+- Views own presentation state: sheets, confirmation dialogs, input drafts and focus duration preferences.
+- Observable view models isolated to MainActor own loaded data and asynchronous operations.
+- Repositories and platform services are injected, so behavior is tested without rendering screens.
+- Operations return success when a form should close. The view decides how to dismiss it.
 
-- **VIP:** more files and protocols per screen (boilerplate), but very clear boundaries; good for large teams and rule-heavy screens.
-- **MVVM-C:** less ceremony than VIP/VIPER; the risk is the ViewModel growing too much, mitigated with smaller ViewModels per sheet (`StepSuggestionsViewModel`).
-- **VIPER:** would add Entity and a more formal Router; for these screens, the gain over VIP would not pay off.
-- **MVC:** fine for small screens, but tends to pile everything into the ViewController (the "Massive View Controller").
+The focus duration is selected locally, rather than assigned through an experiment. Remote config, installation bucketing and simulated Objective-C legacy integrations have been removed.
 
 ## Consequences
 
-Newcomers need to know more than one pattern. The rule: the pattern lives inside the feature, and every feature has the same public boundary (a *builder* that takes dependencies and returns a screen).
+There are no feature coordinators, routers, VIP cycles or UIKit view controllers. UIKit remains an implementation detail of the system PDF renderer and dynamic color resolution; it is not a presentation architecture.
+
+Tests exercise observable behavior, persistence and failure handling. SwiftUI snapshots replace the former UIKit screen snapshots, retaining light, dark and accessibility text coverage.

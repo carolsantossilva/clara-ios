@@ -1,4 +1,4 @@
-import ClaraServices
+import ClaraInfrastructure
 import os
 
 // MARK: - Analytics and crashes

@@ -1,7 +1,7 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import ConsultationFeature
+@testable import ClaraUI
 
 /// Renders a real PDF with the UIKit print engine and checks the file.
 @Suite("Consultation — PDF export")

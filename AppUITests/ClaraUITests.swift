@@ -35,6 +35,23 @@ final class ClaraUITests: XCTestCase {
         try app.performAccessibilityAudit()
     }
 
+    @MainActor
+    private func attachScreenshot(_ app: XCUIApplication, name: String) {
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
+    private func scrollTo(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<6 {
+            if element.exists && element.isHittable { break }
+            app.swipeUp()
+        }
+        XCTAssertTrue(element.exists && element.isHittable)
+    }
+
     // MARK: Accessibility audit
 
     @MainActor
@@ -54,7 +71,7 @@ final class ClaraUITests: XCTestCase {
         XCTAssertTrue(good.waitForExistence(timeout: 2))
         good.tap()
         app.buttons["momentForm.save"].tap()
-        XCTAssertTrue(app.cells["records.row"].firstMatch.waitForExistence(timeout: 2))
+        XCTAssertTrue(app.descendants(matching: .any)["records.row"].firstMatch.waitForExistence(timeout: 2))
 
         try auditAccessibility(app)
     }
@@ -63,8 +80,75 @@ final class ClaraUITests: XCTestCase {
     func testConsultationPassesAccessibilityAudit() throws {
         let app = launchApp()
         app.tabBars.buttons["Consulta"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["consultation.preview"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.staticTexts["Preparar uma consulta"].waitForExistence(timeout: 2))
         try auditAccessibility(app)
+        scrollTo(app.buttons["consultation.preview"], in: app)
+        try auditAccessibility(app)
+    }
+
+    @MainActor
+    func testRecordCanBeEditedAndDeleted() {
+        let app = launchApp()
+        app.tabBars.buttons["Registros"].tap()
+        app.buttons["records.newMoment"].tap()
+        let note = app.textFields["momentForm.note"]
+        let editor = app.textViews["momentForm.note"]
+        if editor.waitForExistence(timeout: 2) {
+            editor.tap()
+            editor.typeText("Primeiro registro")
+        } else {
+            XCTAssertTrue(note.waitForExistence(timeout: 2))
+            note.tap()
+            note.typeText("Primeiro registro")
+        }
+        app.buttons["momentForm.save"].tap()
+        let row = app.descendants(matching: .any)["records.row"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+        attachScreenshot(app, name: "records")
+        app.tabBars.buttons["Consulta"].tap()
+        scrollTo(app.buttons["consultation.preview"], in: app)
+        app.buttons["consultation.preview"].tap()
+        app.swipeUp()
+        attachScreenshot(app, name: "consultation")
+        app.tabBars.buttons["Registros"].tap()
+        app.buttons["Editar"].firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Editar registro"].waitForExistence(timeout: 2))
+        app.buttons["mood.good"].tap()
+        app.buttons["momentForm.save"].tap()
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+        app.buttons["Excluir"].firstMatch.tap()
+        app.alerts.buttons["Manter"].tap()
+        XCTAssertTrue(row.exists)
+        app.buttons["Excluir"].firstMatch.tap()
+        app.alerts.buttons["Excluir"].tap()
+        XCTAssertTrue(row.waitForNonExistence(timeout: 2))
+    }
+
+    @MainActor
+    func testFocusDurationCanBeChosenLocally() {
+        let app = launchApp()
+        app.buttons["today.addFirstTask"].tap()
+        let title = app.textFields["addTask.title"]
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        title.tap()
+        title.typeText("Ler um livro")
+        app.buttons["addTask.save"].tap()
+        let duration = app.segmentedControls["today.focusDuration"]
+        XCTAssertTrue(duration.waitForExistence(timeout: 2))
+        duration.buttons["25 min"].tap()
+        attachScreenshot(app, name: "today")
+        XCTAssertTrue(app.buttons["today.startFocus"].label.contains("25"))
+        app.terminate()
+        app.launch()
+        // The in-memory tasks reset; the local preference survives app restarts.
+        app.buttons["today.addFirstTask"].tap()
+        XCTAssertTrue(title.waitForExistence(timeout: 2))
+        title.tap()
+        title.typeText("Ler novamente")
+        app.buttons["addTask.save"].tap()
+        XCTAssertTrue(app.buttons["today.startFocus"].waitForExistence(timeout: 2))
+        XCTAssertTrue(app.buttons["today.startFocus"].label.contains("25"))
+        duration.buttons["15 min"].tap()
     }
 
     // MARK: Form validation

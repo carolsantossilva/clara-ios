@@ -1,4 +1,4 @@
-import ClaraNetworking
+import ClaraInfrastructure
 import os
 
 // MARK: - HTTP

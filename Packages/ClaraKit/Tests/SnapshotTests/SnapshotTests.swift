@@ -1,11 +1,11 @@
 import ClaraCore
-import ClaraDesignSystem
+import ClaraInfrastructure
 import ClaraTestSupport
 import SnapshotTesting
 import SwiftUI
 import Testing
 import UIKit
-@testable import RecordsFeature
+@testable import ClaraUI
 
 /// Snapshot tests compare the rendered screen with a reference image.
 ///
@@ -17,18 +17,15 @@ import UIKit
 @Suite("Snapshots")
 @MainActor
 struct SnapshotTests {
-    private let rows: [Records.Row] = [
-        RecordsPresenter.makeRow(Fixtures.moment(
+    private let moments: [Moment] = [
+        Fixtures.moment(
             kind: .daily,
             at: "2026-09-20T10:00:00-03:00",
             mood: .good,
             note: "Acordei com energia e fiz a caminhada.",
             context: "Dormi cedo"
-        )),
-        RecordsPresenter.makeRow(Fixtures.moment(
-            at: "2026-09-19T18:30:00-03:00",
-            mood: .difficult
-        )),
+        ),
+        Fixtures.moment(at: "2026-09-19T18:30:00-03:00", mood: .difficult),
     ]
 
     @Test func moodPicker() {
@@ -45,35 +42,39 @@ struct SnapshotTests {
         assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 280)))
     }
 
-    @Test func recordsScreenLight() {
-        assertSnapshot(of: makeRecordsScreen(), as: .image(on: .iPhone13))
+    @Test func swiftUIRecordsLight() async {
+        let screen = await makeRecordsScreen()
+        assertSnapshot(of: screen, as: .image(layout: .fixed(width: 390, height: 844)))
     }
 
-    @Test func recordsScreenDark() {
+    @Test func swiftUIRecordsDark() async {
+        let screen = await makeRecordsScreen()
         assertSnapshot(
-            of: makeRecordsScreen(),
-            as: .image(on: .iPhone13, traits: UITraitCollection(userInterfaceStyle: .dark))
+            of: screen,
+            as: .image(layout: .fixed(width: 390, height: 844), traits: UITraitCollection(userInterfaceStyle: .dark))
         )
     }
 
     /// Dynamic Type at an accessibility size: the layout must not clip text.
     /// Taller than the iPhone screen so the image includes the cells, not only the header.
-    @Test func recordsScreenAccessibilityText() {
+    @Test func swiftUIRecordsAccessibilityText() async {
+        let screen = await makeRecordsScreen()
         assertSnapshot(
-            of: makeRecordsScreen(),
+            of: screen,
             as: .image(
-                on: .iPhone13,
-                size: CGSize(width: 390, height: 2_400),
+                layout: .fixed(width: 390, height: 2_400),
                 traits: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraLarge)
             )
         )
     }
 
-    private func makeRecordsScreen() -> UIViewController {
-        // No interactor: the View is fed the Presenter's ViewModel directly.
-        let viewController = RecordsViewController()
-        viewController.loadViewIfNeeded()
-        viewController.displayMoments(Records.Load.ViewModel(rows: rows))
-        return viewController
+    private func makeRecordsScreen() async -> some View {
+        let viewModel = RecordsViewModel(
+            repository: LocalMomentRepository(database: LocalDatabase(inMemory: .init(moments: moments))),
+            analytics: NoOpAnalyticsTracker(),
+            crashReporter: SpyCrashReporter()
+        )
+        await viewModel.load()
+        return RecordsView(viewModel: viewModel)
     }
 }

@@ -1,7 +1,7 @@
 import Foundation
 import os
 import Testing
-@testable import ClaraNetworking
+@testable import ClaraInfrastructure
 
 private struct Greeting: Decodable, Equatable, Sendable {
     let message: String

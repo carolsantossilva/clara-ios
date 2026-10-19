@@ -77,7 +77,7 @@ private struct TaskCard: View {
                 EyebrowText("✦  Seu próximo passo")
                 Spacer()
                 Text("sem pressa")
-                    .font(.caption2.weight(.bold))
+                    .font(.caption.weight(.bold))
                     .foregroundStyle(ClaraColor.sageInk)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 10)

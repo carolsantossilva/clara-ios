@@ -173,25 +173,45 @@ jobs:
     needs: [detect, lint]
     if: needs.detect.outputs.package == 'true' && needs.detect.outputs.app != 'true'
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Vigia: build + testes levam uns 4 minutos. Se passar de 12, algum teste travou;
+      # antes de matar, grava a pilha de cada thread dos processos de teste (sample),
+      # para o log mostrar onde travou em vez de só "The operation was canceled".
       - name: Testes
         working-directory: Packages/ClaraKit
         run: |
-          set -o pipefail
           UDID=$("$GITHUB_WORKSPACE/scripts/ci/simulator.sh")
           mkdir -p "$GITHUB_WORKSPACE/build"
-          xcodebuild test \
-            -scheme ClaraKit-Package \
-            -destination "id=$UDID" \
-            -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
-            -resultBundlePath "$GITHUB_WORKSPACE/build/Testes.xcresult" \
-            -enableCodeCoverage YES \
-            -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO | tee "$GITHUB_WORKSPACE/build/xcodebuild.log"
+          (
+            set -o pipefail
+            xcodebuild test \
+              -scheme ClaraKit-Package \
+              -destination "id=$UDID" \
+              -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
+              -resultBundlePath "$GITHUB_WORKSPACE/build/Testes.xcresult" \
+              -enableCodeCoverage YES \
+              -skipMacroValidation \
+              CODE_SIGNING_ALLOWED=NO | tee "$GITHUB_WORKSPACE/build/xcodebuild.log"
+          ) &
+          tests=$!
+          for _ in $(seq 144); do
+            kill -0 "$tests" 2>/dev/null || break
+            sleep 5
+          done
+          if kill -0 "$tests" 2>/dev/null; then
+            echo "::error::Os testes não terminaram em 12 minutos. Pilhas dos processos de teste:"
+            for pid in $(pgrep -x xctest); do
+              sample "$pid" 3 -file "$GITHUB_WORKSPACE/build/sample-$pid.txt" >/dev/null 2>&1 || true
+              cat "$GITHUB_WORKSPACE/build/sample-$pid.txt" || true
+            done
+            pkill -x xcodebuild || true
+            exit 1
+          fi
+          wait "$tests"
       - name: Sem avisos do compilador
         run: scripts/ci/no_warnings.sh build/xcodebuild.log
       - name: Cobertura mínima
@@ -200,7 +220,10 @@ jobs:
         if: failure()
         with:
           name: resultado-dos-testes-do-pacote
-          path: build/Testes.xcresult
+          path: |
+            build/Testes.xcresult
+            build/sample-*.txt
+          if-no-files-found: ignore
           retention-days: 7
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()

@@ -1,10 +1,9 @@
 import ClaraCore
-import ClaraServices
-import ClaraStorage
+import ClaraInfrastructure
 import ClaraTestSupport
 import Foundation
 import Testing
-@testable import ConsultationFeature
+@testable import ClaraUI
 
 @Suite("Consultation")
 @MainActor

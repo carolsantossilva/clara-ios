@@ -1,6 +1,6 @@
 import ClaraTestSupport
 import Testing
-@testable import ClaraAI
+@testable import ClaraInfrastructure
 
 @Suite("Step suggestions")
 struct StepSuggesterTests {

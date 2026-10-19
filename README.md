@@ -1,88 +1,68 @@
-# Clara — native iOS
+# Clara
 
-Clara helps you pick a next step, park distractions and gather personal records to bring to an appointment. This is the **native Swift** version of the app I started in React Native (`daily-focus`), rewritten as if it were part of a large app: modular, tested and with CI.
+A native iOS app for choosing a next step, parking distractions and preparing personal records for an appointment. Built with SwiftUI and MVVM, with local storage and optional on-device step suggestions.
 
-> Privacy is a product requirement: tasks and records stay **on the device only** (a file with iOS data protection). The AI runs on the device. Analytics is opt-in and never sends text written by the user.
+The interface is in Brazilian Portuguese. Code and documentation are in English. iOS 17+.
 
-The app's interface is in Brazilian Portuguese; code and docs are in English.
+<p>
+  <img src="docs/screenshots/today.png" width="230" alt="Choosing a focus task and session duration" />
+  <img src="docs/screenshots/records.png" width="230" alt="Personal records in the timeline" />
+  <img src="docs/screenshots/consultation.png" width="230" alt="Previewing a summary for an appointment" />
+</p>
 
-## Features
+## Try the main flow
 
-| Tab | What it does | Architecture |
-|---|---|---|
-| **Hoje** (Today) | Task in focus, focus timer (A/B test 15/25 min), "pause and leave a hint", "this can wait", **small-step suggestions with AI** and holiday notice (BrasilAPI) | SwiftUI + **MVVM-C** |
-| **Registros** (Records) | Daily check-in and one-off moments, edit/delete, timeline | UIKit **View Code** + **VIP** |
-| **Consulta** (Consultation) | Pick a period and records, faithful preview and **PDF** export | SwiftUI + **MVVM** |
+1. In **Hoje**, add a task and its first step. Choose 15 or 25 minutes, start focusing, then pause and leave a clue for resuming. Park unrelated ideas in “Isso pode esperar”.
+2. In **Registros**, save a daily check-in or a moment. A word or a short note is enough. Edit or delete it from the timeline.
+3. In **Consulta**, choose a period, select the records to include, add questions and preview the summary before sharing an A4 PDF.
 
-## Running it (Mac)
+“Passos pequenos” suggests ways to start the focused task. Apple Intelligence runs on the device when available; other devices receive simple suggestions. The screen identifies the source.
+
+## Run on a Mac
+
+Requires Xcode 26+ and an iOS simulator or device.
 
 ```bash
 brew install xcodegen swiftlint
-cd clara-ios
-xcodegen generate        # generates Clara.xcodeproj from project.yml
+xcodegen generate
 open Clara.xcodeproj
 ```
 
-Pick an iPhone simulator and run (⌘R). Tests: ⌘U.
-
-- **Snapshot tests:** the first run records the reference images in `Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__` and **fails on purpose**. Run again and they pass. Commit the images.
-- **On-device AI:** needs iOS 26 + a device with Apple Intelligence (an Apple Silicon Mac with Apple Intelligence on, or iPhone 15 Pro or newer). On an Intel Mac/VM, the app automatically uses the simple suggestions (NaturalLanguage) and says so on screen.
-- **Remote config:** the app reads `config/remote-config.json` straight from this GitHub repository. Offline, it uses the last cached value or the bundled defaults.
-- If your XcodeGen version does not accept the package tests in the scheme, run them directly: `cd Packages/ClaraKit && xcodebuild test -scheme ClaraKit-Package -destination 'platform=iOS Simulator,name=iPhone 17'`.
-
-Fastlane: `bundle install`, then `bundle exec fastlane lint` or `bundle exec fastlane test`.
-
-End-to-end flows with [Maestro](https://maestro.dev), with the app installed on a simulator: `maestro test .maestro`.
-
-## Guardrails for AI-generated code
-
-This project was written with AI assistance. Before any app code, the repository got automated
-checks the AI cannot turn off: Claude Code hooks, a pre-commit hook, CI with policies, secrets,
-lint, tests, coverage, Maestro and CodeQL, and rules on the `main` branch.
-Details in [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+Select an iPhone simulator and run with ⌘R. Run tests with ⌘U.
 
 ```bash
-scripts/install-git-hooks.sh   # once per clone
+xcodebuild test -project Clara.xcodeproj -scheme Clara \
+  -destination 'platform=iOS Simulator,name=iPhone 17' -skipMacroValidation
 ```
 
-## Structure
+On-device generative suggestions require iOS 26 and a device with Apple Intelligence enabled. The app remains usable without them and without an internet connection. The holiday notice is the only network feature and requests only the year from BrasilAPI.
 
-```
-App/                      App target: composition root, tabs, privacy panel, MetricKit
-AppUITests/               UI tests (XCUITest)
-Packages/ClaraKit/        Local SPM package with every module
-  Sources/
-    ClaraCore/            Models (structs), repository protocols, summary and HTML (pure)
-    ClaraStorage/         Local database (actor) + repositories
-    ClaraNetworking/      Generic REST client (Endpoint with associatedtype, retry, errors)
-    ClaraServices/        Feature flags/A-B, remote config, analytics, crash reporting, holidays
-    ClaraAI/              Foundation Models (on-device) + NaturalLanguage fallback
-    ClaraLegacy/          "Legacy" Objective-C (formatter and a store with completion handlers)
-    ClaraDesignSystem/    Tokens (light/dark), typography with Dynamic Type, components
-    TodayFeature/         SwiftUI + MVVM-C
-    RecordsFeature/       UIKit View Code + VIP
-    ConsultationFeature/  SwiftUI + MVVM, PDF export
-    ClaraTestSupport/     Test doubles shared across suites
-  Tests/                  Swift Testing + snapshot tests
-config/remote-config.json Remote config served by GitHub
-docs/                     Guardrails and ADRs
-```
+## Design decisions
 
-Dependency graph (features do not know each other; everything points to `ClaraCore`):
+- **SwiftUI + MVVM throughout.** Views own sheets, dialogs and form drafts. View models handle loading, validation and saving. The three tabs share a small set of visual components.
+- **Three modules.** `ClaraCore` contains models and report rules; `ClaraInfrastructure` implements storage, networking and on-device suggestions; `ClaraUI` contains screens and view models. The app assembles their dependencies.
+- **Local persistence.** An actor serializes access to a JSON file. Writes are atomic and protected by iOS file protection; memory updates only after a successful write. Revisions prevent stale record edits from overwriting newer data.
+- **Faithful reports.** Selection respects the local day of each record, including its original time zone. Export preserves the user's words and escapes text before rendering HTML as PDF.
+- **Privacy.** Task and record content is never sent to a server. Optional local usage events contain only action metadata. The user chooses whether and with whom to share an exported PDF. The app makes no clinical interpretations.
 
-```
-                 App (composition root)
-        ┌───────────┼──────────────┬──────────────┐
-  TodayFeature  RecordsFeature  ConsultationFeature  ClaraStorage
-     │  │  │         │               │                 │
-     │  │  └──── ClaraDesignSystem ──┘                 │
-     │  └── ClaraAI                                    │
-     └──────── ClaraServices ── ClaraNetworking        │
-                 │      └── ClaraLegacy (ObjC)         │
-                 └──────────── ClaraCore ◀─────────────┘
+The current scope is a small personal app. JSON storage is adequate for this volume; large histories and schema migrations would need further work. The timer counts while the app is active; background countdown recovery is not implemented.
+
+## Repository
+
+```text
+App/                              App entry point and dependency assembly
+Packages/ClaraKit/
+  Sources/ClaraCore/               Models and report rules
+  Sources/ClaraInfrastructure/     Storage, networking, local events, AI
+  Sources/ClaraUI/                 Today, Records, Consultation, shared components
+  Sources/ClaraTestSupport/        Shared test doubles and fixtures
+  Tests/                          Behavior tests and visual snapshots
+AppUITests/                       Accessibility audits and UI behavior
+.maestro/                         End-to-end journeys
 ```
 
-## Documentation
+Tests cover persistence, revision conflicts, report filtering, HTML escaping, PDF output, suggestions fallback and screen behavior. Snapshots cover light/dark appearance and large text. XCUITest audits accessibility; Maestro exercises the main journeys.
 
-- [Guardrails for AI-generated code](docs/GUARDRAILS.md)
-- Architecture decisions: [modularization](docs/adr/0001-modularization-spm-xcodegen.md) · [one architecture per feature](docs/adr/0002-architecture-per-feature.md) · [on-device AI](docs/adr/0003-on-device-ai.md) · [guardrails for AI](docs/adr/0004-guardrails-for-ai-generated-code.md)
+The existing CI and AI-assisted development checks are documented in [Guardrails](docs/GUARDRAILS.md). Architecture details: [module boundaries](docs/adr/0001-modularization-spm-xcodegen.md), [SwiftUI and MVVM](docs/adr/0002-architecture-per-feature.md), [on-device suggestions](docs/adr/0003-on-device-ai.md).
+
+This is the native Swift version of the product originally explored in React Native (`daily-focus`). It was developed with AI assistance; implementation choices and verification are recorded in the repository.

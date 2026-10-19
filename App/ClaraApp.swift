@@ -8,7 +8,6 @@ struct ClaraApp: App {
     var body: some Scene {
         WindowGroup {
             RootView(environment: environment)
-                .task { await environment.bootstrap() }
         }
     }
 }

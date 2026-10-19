@@ -2,10 +2,10 @@ import ClaraCore
 import Foundation
 import NaturalLanguage
 
-/// Substituto sem modelo generativo: usa o NaturalLanguage (no aparelho) para
-/// descobrir se o título já começa com um verbo e monta passos genéricos.
+/// Fallback without a generative model: uses NaturalLanguage (on device) to
+/// find out whether the title already starts with a verb and builds generic steps.
 ///
-/// É honesto sobre ser simples — a tela mostra a origem da sugestão.
+/// It is honest about being simple: the screen shows where the suggestion came from.
 public struct HeuristicStepSuggester: StepSuggesting {
     public init() {}
 

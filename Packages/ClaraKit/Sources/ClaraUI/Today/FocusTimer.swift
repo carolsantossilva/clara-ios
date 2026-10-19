@@ -1,12 +1,11 @@
-import ClaraLegacy
 import Foundation
 import Observation
 
-/// Contagem regressiva da sessão de foco.
+/// Focus session countdown.
 ///
-/// `@Observable` (Observation, iOS 17): a SwiftUI rastreia quais propriedades cada
-/// view leu no `body` e redesenha só essas views quando elas mudam. Diferente do
-/// antigo `ObservableObject`, não precisa de `@Published` e evita redesenhos extras.
+/// `@Observable` (Observation, iOS 17): SwiftUI tracks which properties each
+/// view read in `body` and redraws only those views when they change. Unlike the
+/// old `ObservableObject`, it needs no `@Published` and avoids extra redraws.
 @MainActor
 @Observable
 public final class FocusTimer {
@@ -27,8 +26,8 @@ public final class FocusTimer {
         remainingSeconds = durationSeconds
         didFinish = false
         isRunning = true
-        // A Task herda o isolamento do MainActor: o loop roda no main actor, mas
-        // `clock.sleep` suspende sem bloquear a thread principal.
+        // The Task inherits MainActor isolation: the loop runs on the main actor, but
+        // `clock.sleep` suspends without blocking the main thread.
         tickTask = Task { [weak self] in
             await self?.runLoop()
         }
@@ -40,7 +39,7 @@ public final class FocusTimer {
         isRunning = false
     }
 
-    /// Espera o loop terminar. Usado nos testes.
+    /// Waits for the loop to finish. Used in tests.
     func waitUntilFinished() async {
         await tickTask?.value
     }
@@ -50,7 +49,7 @@ public final class FocusTimer {
             do {
                 try await clock.sleep(for: .seconds(1))
             } catch {
-                return // cancelado
+                return // cancelled
             }
             remainingSeconds -= 1
         }
@@ -58,7 +57,18 @@ public final class FocusTimer {
         didFinish = true
     }
 
-    // Código Objective-C legado chamado do Swift.
-    public var clockLabel: String { CLADurationFormatter.clockString(seconds: remainingSeconds) }
-    public var spokenLabel: String { CLADurationFormatter.spokenString(seconds: remainingSeconds) }
+    public var clockLabel: String {
+        let seconds = max(0, remainingSeconds)
+        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    public var spokenLabel: String {
+        let seconds = max(0, remainingSeconds)
+        let minutes = seconds / 60
+        let remainder = seconds % 60
+        var parts: [String] = []
+        if minutes > 0 { parts.append("\(minutes) \(minutes == 1 ? "minuto" : "minutos")") }
+        if remainder > 0 || minutes == 0 { parts.append("\(remainder) \(remainder == 1 ? "segundo" : "segundos")") }
+        return parts.joined(separator: " e ")
+    }
 }

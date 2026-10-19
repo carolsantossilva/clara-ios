@@ -1,53 +1,104 @@
 import ClaraCore
-import ClaraDesignSystem
-import ClaraServices
+import ClaraInfrastructure
 import SwiftUI
 
-/// Tela Hoje. Views em SwiftUI são *descrições* baratas da interface: o `body`
-/// pode ser recalculado muitas vezes, por isso não guardamos estado nelas — ele
-/// fica no ViewModel (`@Observable`) ou em `@State` para coisas locais da view.
-struct TodayView: View {
-    // `@Bindable` permite criar bindings (`$viewModel.parkingText`) para um objeto @Observable.
+/// The Today screen. SwiftUI views are cheap *descriptions* of the interface: `body`
+/// can be recomputed many times, so we keep no state in them; it lives in the
+/// ViewModel (`@Observable`) or in `@State` for view-local things.
+public struct TodayView<PrivacyContent: View>: View {
+    // `@Bindable` allows creating bindings (`$viewModel.parkingText`) to an @Observable object.
     @Bindable var viewModel: TodayViewModel
+    @AppStorage("focus.minutes") private var preferredFocusMinutes = 15
+    @State private var sheet: Sheet?
+    private let privacyContent: () -> PrivacyContent
 
-    var body: some View {
+    private enum Sheet: Identifiable {
+        case addTask
+        case pause(FocusTask)
+        case steps(StepSuggestionsViewModel)
+        case privacy
+
+        var id: String {
+            switch self {
+            case .addTask: "addTask"
+            case .pause(let task): "pause-\(task.id)"
+            case .steps(let viewModel): "steps-\(viewModel.id)"
+            case .privacy: "privacy"
+            }
+        }
+    }
+
+    public init(viewModel: TodayViewModel, @ViewBuilder privacyContent: @escaping () -> PrivacyContent) {
+        self.viewModel = viewModel
+        self.privacyContent = privacyContent
+    }
+
+    public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: ClaraSpacing.large) {
                 BrandHeader {
-                    Button(action: viewModel.privacyTapped) { LocalOnlyBadge() }
-                        .accessibilityHint("Abre privacidade e diagnóstico")
+                    Button { sheet = .privacy } label: { LocalOnlyBadge() }
+                        .accessibilityHint("Abre informações de privacidade")
                         .accessibilityIdentifier("today.privacyBadge")
                 }
                 PageHeading(
                     eyebrow: "Seu cantinho de hoje",
-                    title: "Um passo de cada vez ✳",
+                    title: "Um passo de cada vez",
                     subtitle: "O que cabe agora já é suficiente."
                 )
                 if let holiday = viewModel.upcomingHoliday {
                     HolidayBanner(holiday: holiday)
                 }
-                FocusSection(viewModel: viewModel)
-                OtherTasksSection(viewModel: viewModel)
+                FocusSection(
+                    viewModel: viewModel,
+                    onAdd: { sheet = .addTask },
+                    onPause: { if let task = viewModel.focus { sheet = .pause(task) } },
+                    onSuggest: {
+                        if let task = viewModel.focus { sheet = .steps(viewModel.makeStepSuggestions(for: task)) }
+                    }
+                )
+                if !viewModel.tasks.isEmpty {
+                    OtherTasksSection(viewModel: viewModel, onAdd: { sheet = .addTask })
+                }
                 ParkingSection(viewModel: viewModel)
-                Text("☁  Você pode começar pelo que está mais perto.")
-                    .font(.caption)
-                    .foregroundStyle(ClaraColor.muted)
+                Text("Você pode começar pelo que está mais perto.")
+                    .font(.footnote)
+                    .foregroundStyle(ClaraColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, ClaraSpacing.large)
             .padding(.bottom, ClaraSpacing.extraLarge)
         }
         .background(ClaraColor.background.ignoresSafeArea())
-        // `.task` começa quando a view aparece e é cancelada quando ela some.
-        .task { await viewModel.onAppear() }
+        // `.task` starts when the view appears and is cancelled when it goes away.
+        .task {
+            viewModel.focusMinutes = preferredFocusMinutes == 25 ? 25 : 15
+            await viewModel.onAppear()
+        }
+        .onChange(of: viewModel.focusMinutes) { _, minutes in preferredFocusMinutes = minutes }
+        .sheet(item: $sheet) { sheet in
+            switch sheet {
+            case .addTask: AddTaskSheet(viewModel: viewModel)
+            case .pause(let task): PauseSheet(task: task, viewModel: viewModel)
+            case .steps(let suggestions):
+                StepSuggestionsSheet(viewModel: suggestions) { step, source in
+                    await viewModel.acceptSuggestedStep(step, for: suggestions.task, source: source)
+                }
+            case .privacy: privacyContent()
+            }
+        }
         .claraAlert($viewModel.alert)
     }
 }
 
-// MARK: - Foco
+// MARK: - Focus
 
 private struct FocusSection: View {
     let viewModel: TodayViewModel
+    let onAdd: () -> Void
+    let onPause: () -> Void
+    let onSuggest: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: ClaraSpacing.medium) {
@@ -56,10 +107,10 @@ private struct FocusSection: View {
                     .frame(maxWidth: .infinity, minHeight: 120)
             } else if let focus = viewModel.focus {
                 TaskCard(task: focus)
-                FocusActions(viewModel: viewModel)
+                FocusActions(viewModel: viewModel, onPause: onPause, onSuggest: onSuggest)
             } else {
                 EmptyStateView()
-                Button("Adicionar uma tarefa ＋", action: viewModel.addTaskTapped)
+                Button("Adicionar uma tarefa ＋", action: onAdd)
                     .buttonStyle(.claraPrimary)
                     .accessibilityIdentifier("today.addFirstTask")
             }
@@ -77,7 +128,7 @@ private struct TaskCard: View {
                 EyebrowText("✦  Seu próximo passo")
                 Spacer()
                 Text("sem pressa")
-                    .font(.caption.weight(.bold))
+                    .font(.caption2.weight(.bold))
                     .foregroundStyle(ClaraColor.sageInk)
                     .padding(.vertical, 6)
                     .padding(.horizontal, 10)
@@ -117,10 +168,19 @@ private struct TaskCard: View {
 }
 
 private struct FocusActions: View {
-    let viewModel: TodayViewModel
+    @Bindable var viewModel: TodayViewModel
+    let onPause: () -> Void
+    let onSuggest: () -> Void
 
     var body: some View {
         VStack(spacing: ClaraSpacing.small) {
+            Picker("Tempo de foco", selection: $viewModel.focusMinutes) {
+                Text("15 min").tag(15)
+                Text("25 min").tag(25)
+            }
+            .pickerStyle(.segmented)
+            .disabled(viewModel.timer.isRunning)
+            .accessibilityIdentifier("today.focusDuration")
             if viewModel.timer.isRunning {
                 TimerView(timer: viewModel.timer)
             } else {
@@ -130,14 +190,12 @@ private struct FocusActions: View {
                 .buttonStyle(.claraPrimary)
                 .accessibilityIdentifier("today.startFocus")
             }
-            Button("Pausar e salvar", action: viewModel.pauseTapped)
+            Button("Pausar e salvar", action: onPause)
                 .buttonStyle(.claraSecondary)
                 .accessibilityIdentifier("today.pause")
-            if viewModel.showsStepSuggestions {
-                Button("✨ Sugerir passos pequenos", action: viewModel.suggestStepsTapped)
-                    .buttonStyle(.claraSecondary)
-                    .accessibilityIdentifier("today.suggestSteps")
-            }
+            Button("✨ Sugerir passos pequenos", action: onSuggest)
+                .buttonStyle(.claraSecondary)
+                .accessibilityIdentifier("today.suggestSteps")
             Button("Marcar como concluída") {
                 Task { await viewModel.completeFocus() }
             }
@@ -149,8 +207,8 @@ private struct FocusActions: View {
     }
 }
 
-/// View pequena e separada de propósito: só ela lê `remainingSeconds`, então só
-/// ela redesenha a cada segundo — e não a tela inteira.
+/// A small view, separate on purpose: only it reads `remainingSeconds`, so only
+/// it redraws every second, not the whole screen.
 private struct TimerView: View {
     let timer: FocusTimer
 
@@ -172,15 +230,16 @@ private struct TimerView: View {
     }
 }
 
-// MARK: - Outras tarefas
+// MARK: - Other tasks
 
 private struct OtherTasksSection: View {
     let viewModel: TodayViewModel
+    let onAdd: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: ClaraSpacing.medium) {
             SectionHeader(eyebrow: "Outras coisas", title: "Quando fizer sentido") {
-                Button(action: viewModel.addTaskTapped) {
+                Button(action: onAdd) {
                     Image(systemName: "plus")
                         .font(.headline)
                         .foregroundStyle(ClaraColor.lavenderDeep)
@@ -223,7 +282,7 @@ private struct OtherTasksSection: View {
     }
 }
 
-// MARK: - Guardar para depois
+// MARK: - Park for later
 
 private struct ParkingSection: View {
     @Bindable var viewModel: TodayViewModel
@@ -234,9 +293,11 @@ private struct ParkingSection: View {
             SectionHeader(eyebrow: "Um lugar para guardar", title: "Isso pode esperar")
             Text("Anote a ideia e volte ao que estava fazendo.")
                 .font(.footnote)
-                .foregroundStyle(ClaraColor.muted)
+                .foregroundStyle(ClaraColor.ink)
+                .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: ClaraSpacing.small) {
-                TextField("Uma ideia que chegou agora…", text: $viewModel.parkingText)
+                TextField("Uma ideia para depois…", text: $viewModel.parkingText, axis: .vertical)
+                    .lineLimit(1...3)
                     .focused($isFieldFocused)
                     .submitLabel(.done)
                     .onSubmit(save)
@@ -280,7 +341,7 @@ private struct ParkingSection: View {
     }
 }
 
-// MARK: - Feriado
+// MARK: - Holiday
 
 private struct HolidayBanner: View {
     let holiday: Holiday

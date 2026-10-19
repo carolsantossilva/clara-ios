@@ -1,27 +1,14 @@
-import ClaraAI
+import ClaraInfrastructure
 import ClaraCore
-import ClaraDesignSystem
-import ClaraServices
 import Foundation
 import Observation
 import os
 
-/// O que o ViewModel pode pedir de navegação. Ele não conhece views nem sheets:
-/// só expressa a intenção ("mostrar a pausa"). Quem decide *como* é o Coordinator.
-@MainActor
-public protocol TodayRouting: AnyObject {
-    func presentAddTask()
-    func presentPause(for task: FocusTask)
-    func presentStepSuggestions(for task: FocusTask)
-    func presentPrivacy()
-    func dismissSheet()
-}
-
-/// Estado e regras da tela Hoje (o "VM" do MVVM-C).
+/// State and rules of the Today screen (MVVM).
 ///
-/// - `@MainActor`: todo estado que a UI lê fica no main actor. Sem isso, atualizar
-///   `tasks` depois de um `await` poderia acontecer fora da main thread.
-/// - `@Observable`: a view redesenha quando as propriedades lidas mudam.
+/// - `@MainActor`: all state the UI reads lives on the main actor. Without it, updating
+///   `tasks` after an `await` could happen off the main thread.
+/// - `@Observable`: the view redraws when the properties it read change.
 @MainActor
 @Observable
 public final class TodayViewModel {
@@ -34,10 +21,6 @@ public final class TodayViewModel {
     public var alert: AlertContent?
     public let timer: FocusTimer
 
-    // `weak`: o Coordinator é dono do ViewModel; a referência de volta não pode reter.
-    // `@ObservationIgnored`: dependências e router não são estado de tela.
-    @ObservationIgnored weak var router: (any TodayRouting)?
-
     @ObservationIgnored private let dependencies: TodayDependencies
     @ObservationIgnored private let signposter = OSSignposter(subsystem: "app.clara", category: "Today")
 
@@ -46,7 +29,7 @@ public final class TodayViewModel {
         self.timer = FocusTimer(durationSeconds: 15 * 60, clock: dependencies.clock)
     }
 
-    // MARK: Estado derivado
+    // MARK: Derived state
 
     public var focus: FocusTask? {
         tasks.first { $0.id == focusID } ?? tasks.first
@@ -56,37 +39,30 @@ public final class TodayViewModel {
         tasks.filter { $0.id != focus?.id }
     }
 
-    /// Duração vem do teste A/B (15 ou 25 min).
-    public var focusMinutes: Int {
-        dependencies.flags.variant(.focusDuration).flatMap(Int.init) ?? 15
-    }
+    public var focusMinutes = 15
 
-    public var showsStepSuggestions: Bool {
-        dependencies.flags.isEnabled(.aiStepSuggestions)
-    }
+    // MARK: Loading
 
-    // MARK: Carregamento
-
-    /// Chamado pelo `.task` da view: é cancelado sozinho se a view sair da tela.
+    /// Called by the view's `.task`: cancelled automatically if the view leaves the screen.
     public func onAppear() async {
-        // `async let` sobre métodos do MainActor: as duas cargas se intercalam nos
-        // pontos de `await` (concorrência), mas não rodam em paralelo na CPU.
+        // `async let` over MainActor methods: the two loads interleave at the
+        // `await` points (concurrency), but they do not run in parallel on the CPU.
         async let content: Void = load()
         async let holiday: Void = loadHoliday()
         _ = await (content, holiday)
     }
 
     func load() async {
-        // Intervalo visível no Instruments (Points of Interest / os_signpost).
+        // Interval visible in Instruments (Points of Interest / os_signpost).
         let state = signposter.beginInterval("TodayLoad")
         defer { signposter.endInterval("TodayLoad", state) }
 
-        // Copiamos para constantes locais: o `async let` roda em tarefa filha e não
-        // deve tocar estado isolado do MainActor (`self.dependencies`) de lá.
+        // Copy into local constants: `async let` runs in a child task and must not
+        // touch MainActor-isolated state (`self.dependencies`) from there.
         let taskRepository = dependencies.tasks
         let parkingRepository = dependencies.parking
         do {
-            // Três leituras em paralelo, como o `Promise.all` do app original.
+            // Three reads in parallel, like the original app's `Promise.all`.
             async let openTasks = taskRepository.listOpen()
             async let openNotes = parkingRepository.listOpen()
             async let currentFocus = taskRepository.focusID()
@@ -105,25 +81,23 @@ public final class TodayViewModel {
     }
 
     func loadHoliday() async {
-        guard dependencies.flags.isEnabled(.holidayBanner) else { return }
         let today = LocalDay(dependencies.now(), in: .current)
-        // Feriado é um enfeite: se a rede falhar, a tela segue sem ele, sem alerta.
+        // The holiday is a nice-to-have: if the network fails, the screen goes on without it, no alert.
         upcomingHoliday = try? await dependencies.holidays.upcomingHoliday(from: today, within: 7)
         if upcomingHoliday != nil {
             dependencies.analytics.track(.holidayBannerShown)
         }
     }
 
-    // MARK: Tarefas
+    // MARK: Tasks
 
-    /// - Returns: `true` se salvou (a sheet pode fechar).
+    /// - Returns: `true` if it saved (the sheet can close).
     @discardableResult
     public func createTask(title: String, nextAction: String) async -> Bool {
         guard !title.trimmed.isEmpty else { return false }
         do {
             _ = try await dependencies.tasks.create(title: title, nextAction: nextAction)
             dependencies.analytics.track(.taskCreated(hasFirstStep: !nextAction.trimmed.isEmpty))
-            router?.dismissSheet()
             await load()
             return true
         } catch {
@@ -147,20 +121,22 @@ public final class TodayViewModel {
         await chooseFocus(focus)
         guard focusID == focus.id else { return }
         timer.start(durationSeconds: focusMinutes * 60)
-        dependencies.analytics.track(.focusStarted(minutes: focusMinutes, variant: dependencies.flags.variant(.focusDuration)))
+        dependencies.analytics.track(.focusStarted(minutes: focusMinutes))
     }
 
-    public func pause(whereStopped: String, nextStep: String) async {
-        guard let focus else { return }
+    @discardableResult
+    public func pause(whereStopped: String, nextStep: String) async -> Bool {
+        guard let focus else { return false }
         do {
             let resumeStep = nextStep.trimmed.isEmpty ? focus.nextAction : nextStep
             try await dependencies.tasks.savePause(id: focus.id, whereStopped: whereStopped, nextAction: resumeStep)
             timer.stop()
             dependencies.analytics.track(.focusPaused(savedClue: !whereStopped.trimmed.isEmpty))
-            router?.dismissSheet()
             await load()
+            return true
         } catch {
             report(error, context: "today.pause", title: "Não foi possível salvar a pausa", message: "Sua tarefa continua salva no aparelho.")
+            return false
         }
     }
 
@@ -176,18 +152,20 @@ public final class TodayViewModel {
         }
     }
 
-    public func acceptSuggestedStep(_ step: String, for task: FocusTask, source: StepSuggestion.Source) async {
+    @discardableResult
+    public func acceptSuggestedStep(_ step: String, for task: FocusTask, source: StepSuggestion.Source) async -> Bool {
         do {
             try await dependencies.tasks.updateNextAction(id: task.id, nextAction: step)
             dependencies.analytics.track(.stepSuggestionAccepted(source: source.rawValue))
-            router?.dismissSheet()
             await load()
+            return true
         } catch {
             report(error, context: "today.acceptStep", title: "Não foi possível salvar o passo", message: "Tente novamente em instantes.")
+            return false
         }
     }
 
-    // MARK: Guardar para depois
+    // MARK: Park for later
 
     public func addParkingNote() async {
         let text = parkingText.trimmed
@@ -211,22 +189,11 @@ public final class TodayViewModel {
         }
     }
 
-    // MARK: Navegação
-
-    public func addTaskTapped() { router?.presentAddTask() }
-    public func privacyTapped() { router?.presentPrivacy() }
-
-    public func pauseTapped() {
-        guard let focus else { return }
-        router?.presentPause(for: focus)
+    func makeStepSuggestions(for task: FocusTask) -> StepSuggestionsViewModel {
+        StepSuggestionsViewModel(task: task, suggester: dependencies.suggester, analytics: dependencies.analytics)
     }
 
-    public func suggestStepsTapped() {
-        guard let focus else { return }
-        router?.presentStepSuggestions(for: focus)
-    }
-
-    // MARK: Erros
+    // MARK: Errors
 
     private func report(_ error: any Error, context: String, title: String, message: String) {
         dependencies.crashReporter.record(error, context: context)
@@ -234,7 +201,7 @@ public final class TodayViewModel {
     }
 }
 
-/// ViewModel da sheet de sugestões. Vive enquanto a sheet estiver aberta.
+/// ViewModel for the suggestions sheet. Lives while the sheet is open.
 @MainActor
 @Observable
 public final class StepSuggestionsViewModel: Identifiable {

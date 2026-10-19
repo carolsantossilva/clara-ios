@@ -1,15 +1,15 @@
 import ClaraCore
 import Foundation
 
-/// Banco local do app: um único arquivo JSON protegido pelo iOS.
+/// The app's local database: a single JSON file protected by iOS.
 ///
-/// Por que `actor`? Várias telas leem e gravam ao mesmo tempo. O actor serializa
-/// o acesso ao `snapshot` sem locks manuais: o compilador impede acesso de fora
-/// sem `await`, o que elimina data races nessa parte do app.
+/// Why an `actor`? Several screens read and write at the same time. The actor serializes
+/// access to `snapshot` without manual locks: the compiler forbids outside access
+/// without `await`, which rules out data races in this part of the app.
 ///
-/// Trade-off: para um MVP de uso pessoal o volume é pequeno e JSON é suficiente.
-/// Com milhares de registros, o próximo passo seria SQLite (GRDB/SwiftData)
-/// atrás dos mesmos protocolos de repositório — as features não mudariam.
+/// Trade-off: for a personal-use MVP the volume is small and JSON is enough.
+/// With thousands of records, the next step would be SQLite (GRDB/SwiftData)
+/// behind the same repository protocols; the features would not change.
 public actor LocalDatabase {
     public struct Snapshot: Codable, Equatable, Sendable {
         public var tasks: [FocusTask]
@@ -33,7 +33,7 @@ public actor LocalDatabase {
     private var snapshot: Snapshot
     private let fileURL: URL?
 
-    /// - Parameter fileURL: `nil` mantém tudo em memória (testes, previews, UI tests).
+    /// - Parameter fileURL: `nil` keeps everything in memory (tests, previews, UI tests).
     public init(fileURL: URL?) throws {
         self.fileURL = fileURL
         if let fileURL, FileManager.default.fileExists(atPath: fileURL.path) {
@@ -61,8 +61,8 @@ public actor LocalDatabase {
         try body(snapshot)
     }
 
-    /// Altera uma cópia e só publica a mudança se a gravação em disco der certo.
-    /// Assim, uma falha de escrita nunca deixa memória e disco divergentes.
+    /// Changes a copy and only publishes the change if writing to disk succeeds.
+    /// That way a write failure never leaves memory and disk out of sync.
     public func write<T: Sendable>(_ body: @Sendable (inout Snapshot) throws -> T) throws -> T {
         var copy = snapshot
         let result = try body(&copy)
@@ -74,8 +74,8 @@ public actor LocalDatabase {
     private func persist(_ snapshot: Snapshot) throws {
         guard let fileURL else { return }
         let data = try Self.makeEncoder().encode(snapshot)
-        // .completeFileProtection: o arquivo fica cifrado enquanto o aparelho está bloqueado.
-        // Os registros podem conter informação de saúde (dado sensível pela LGPD).
+        // .completeFileProtection: the file stays encrypted while the device is locked.
+        // Records may contain health information (sensitive data under Brazil's LGPD).
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
     }
 

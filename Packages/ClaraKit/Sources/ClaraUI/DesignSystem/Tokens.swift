@@ -1,16 +1,15 @@
 import SwiftUI
 import UIKit
 
-// Tokens do Design System, portados de `theme/tokens.ts` do app React Native.
-// A fonte da verdade é UIColor dinâmica (claro/escuro); SwiftUI e UIKit leem a
-// mesma cor, então as duas camadas de UI nunca divergem.
+// Design system tokens, ported from the React Native app's `theme/tokens.ts`.
+// Dynamic colors resolve the light/dark palette for SwiftUI.
 
 public enum ClaraPalette {
     public static let background = UIColor.dynamic(light: 0xF8F5F1, dark: 0x1B1920)
     public static let paper = UIColor.dynamic(light: 0xFFFDF9, dark: 0x25222C)
     public static let ink = UIColor.dynamic(light: 0x292537, dark: 0xF2EFF6)
-    public static let muted = UIColor.dynamic(light: 0x5A5564, dark: 0xB5AFBE)
-    public static let eyebrow = UIColor.dynamic(light: 0x5E5270, dark: 0xB9ADCB)
+    public static let muted = UIColor.dynamic(light: 0x6A6574, dark: 0xB5AFBE)
+    public static let eyebrow = UIColor.dynamic(light: 0x6B5E80, dark: 0xB9ADCB)
     public static let lavender = UIColor.dynamic(light: 0xF0ECF8, dark: 0x332D40)
     public static let lavenderDeep = UIColor.dynamic(light: 0x69558A, dark: 0xC9BBE4)
     public static let onLavenderDeep = UIColor.dynamic(light: 0xFFFDF9, dark: 0x1B1920)
@@ -53,28 +52,12 @@ public enum ClaraSpacing {
     public static let extraLarge: CGFloat = 28
 }
 
-/// Tipografia baseada em estilos de texto: tudo acompanha o Dynamic Type.
-/// Evite `caption2`: ele já está no tamanho mínimo (11 pt) no tamanho padrão e não
-/// diminui com o ajuste do sistema; a auditoria de acessibilidade aponta isso.
+/// Typography based on text styles: everything follows Dynamic Type.
 public enum ClaraFont {
     public static let largeTitle = Font.system(.largeTitle, design: .serif)
     public static let title = Font.system(.title2, design: .serif)
     public static let headline = Font.system(.title3, design: .serif)
-    public static let eyebrow = Font.caption.weight(.heavy)
-
-    /// Versão UIKit. Cria a fonte no tamanho base e escala com `UIFontMetrics`, para
-    /// que `adjustsFontForContentSizeCategory` funcione também com fonte serifada.
-    public static func uiFont(_ style: UIFont.TextStyle, serif: Bool = false, weight: UIFont.Weight? = nil) -> UIFont {
-        let base = UITraitCollection(preferredContentSizeCategory: .large)
-        var descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: style, compatibleWith: base)
-        if serif, let serifDescriptor = descriptor.withDesign(.serif) {
-            descriptor = serifDescriptor
-        }
-        if let weight {
-            descriptor = descriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: weight]])
-        }
-        return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: 0))
-    }
+    public static let eyebrow = Font.footnote.weight(.heavy)
 }
 
 extension UIColor {

@@ -1,10 +1,9 @@
-import ClaraAI
+import ClaraInfrastructure
 import ClaraCore
-import ClaraDesignSystem
 import SwiftUI
 
-/// "Tire uma coisa da cabeça": cria uma tarefa.
-/// Os campos são `@State` porque são rascunho local da sheet, não estado do app.
+/// "Tire uma coisa da cabeça" (get one thing off your mind): creates a task.
+/// The fields are `@State` because they are the sheet's local draft, not app state.
 struct AddTaskSheet: View {
     let viewModel: TodayViewModel
     @State private var title = ""
@@ -32,8 +31,9 @@ struct AddTaskSheet: View {
                     Button("Salvar tarefa") {
                         isSaving = true
                         Task {
-                            await viewModel.createTask(title: title, nextAction: nextAction)
+                            let saved = await viewModel.createTask(title: title, nextAction: nextAction)
                             isSaving = false
+                            if saved { dismiss() }
                         }
                     }
                     .buttonStyle(.claraPrimary)
@@ -51,11 +51,11 @@ struct AddTaskSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 }
 
-/// "Deixe uma pista para você": salva onde parou e o próximo passo.
+/// "Deixe uma pista para você" (leave yourself a hint): saves where she stopped and the next step.
 struct PauseSheet: View {
     let task: FocusTask
     let viewModel: TodayViewModel
@@ -82,7 +82,9 @@ struct PauseSheet: View {
                         placeholder: task.nextAction.isEmpty ? "ex.: abrir a pasta de exames" : task.nextAction
                     )
                     Button("Salvar para retomar") {
-                        Task { await viewModel.pause(whereStopped: whereStopped, nextStep: nextStep) }
+                        Task {
+                            if await viewModel.pause(whereStopped: whereStopped, nextStep: nextStep) { dismiss() }
+                        }
                     }
                     .buttonStyle(.claraPrimary)
                     .accessibilityIdentifier("pause.save")
@@ -98,14 +100,14 @@ struct PauseSheet: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
     }
 }
 
-/// Sugestões de passos pequenos com IA. A usuária escolhe um passo — ou nenhum.
+/// Small-step suggestions with AI. The user picks a step, or none.
 struct StepSuggestionsSheet: View {
     let viewModel: StepSuggestionsViewModel
-    let onAccept: @MainActor (String, StepSuggestion.Source) async -> Void
+    let onAccept: @MainActor (String, StepSuggestion.Source) async -> Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -146,7 +148,7 @@ struct StepSuggestionsSheet: View {
             VStack(alignment: .leading, spacing: ClaraSpacing.small) {
                 ForEach(suggestion.steps, id: \.self) { step in
                     Button {
-                        Task { await onAccept(step, suggestion.source) }
+                        Task { if await onAccept(step, suggestion.source) { dismiss() } }
                     } label: {
                         HStack {
                             Text(step).multilineTextAlignment(.leading)
@@ -168,7 +170,7 @@ struct StepSuggestionsSheet: View {
     }
 }
 
-/// Transparência: mostra de onde veio a sugestão.
+/// Transparency: shows where the suggestion came from.
 private struct SourceBadge: View {
     let source: StepSuggestion.Source
 

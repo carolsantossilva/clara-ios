@@ -1,12 +1,12 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// Todos os módulos do app vivem neste pacote local. Cada feature depende só de
-// protocolos (ClaraCore) e de serviços de plataforma; nenhuma feature conhece outra.
-// Quem monta as dependências concretas é o target do app (composition root).
+// Every app module lives in this local package. Each feature depends only on
+// protocols (ClaraCore) and platform services; no feature knows another.
+// The app target wires the concrete dependencies (composition root).
 
-// Modo Swift 5 com checagem estrita de concorrência: os problemas de Sendable
-// aparecem como warnings, o que permite migrar para o modo Swift 6 módulo a módulo.
+// Swift 5 mode with strict concurrency checking: Sendable problems show up as
+// warnings, which allows migrating to Swift 6 mode one module at a time.
 let swiftSettings: [SwiftSetting] = [
     .enableUpcomingFeature("StrictConcurrency"),
 ]
@@ -60,8 +60,8 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
 
-        // MARK: Testes
-        // Dublês compartilhados (fakes, spies, relógio imediato) para não duplicar em cada suíte.
+        // MARK: Tests
+        // Shared doubles (fakes, spies, immediate clock) so each suite does not duplicate them.
         .target(
             name: "ClaraTestSupport",
             dependencies: ["ClaraCore", "ClaraNetworking", "ClaraServices", "ClaraAI"],

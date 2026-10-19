@@ -1,72 +1,74 @@
-# Clara — iOS nativo
+# Clara — native iOS
 
-Clara ajuda a escolher um próximo passo, guardar distrações e reunir registros pessoais para levar a uma consulta. Esta é a versão **nativa em Swift** do app que comecei em React Native (`daily-focus`), reescrita como se fosse parte de um app grande: modular, testada e com CI.
+Clara helps you pick a next step, park distractions and gather personal records to bring to an appointment. This is the **native Swift** version of the app I started in React Native (`daily-focus`), rewritten as if it were part of a large app: modular, tested and with CI.
 
-> Privacidade é requisito de produto: tarefas e registros ficam **só no aparelho** (arquivo com proteção de dados do iOS). A IA roda no aparelho. Analytics é opt-in e nunca envia texto escrito pela usuária.
+> Privacy is a product requirement: tasks and records stay **on the device only** (a file with iOS data protection). The AI runs on the device. Analytics is opt-in and never sends text written by the user.
 
-## Funcionalidades
+The app's interface is in Brazilian Portuguese; code and docs are in English.
 
-| Aba | O que faz | Arquitetura |
+## Features
+
+| Tab | What it does | Architecture |
 |---|---|---|
-| **Hoje** | Tarefa em foco, timer de foco (teste A/B 15/25 min), "pausar e deixar uma pista", "isso pode esperar", **sugestão de passos pequenos com IA** e aviso de feriado (BrasilAPI) | SwiftUI + **MVVM-C** |
-| **Registros** | Check-in diário e momentos avulsos, editar/excluir, linha do tempo | UIKit **View Code** + **VIP** |
-| **Consulta** | Escolher período e registros, prévia fiel e exportação em **PDF** | SwiftUI + **MVVM** |
+| **Hoje** (Today) | Task in focus, focus timer (A/B test 15/25 min), "pause and leave a hint", "this can wait", **small-step suggestions with AI** and holiday notice (BrasilAPI) | SwiftUI + **MVVM-C** |
+| **Registros** (Records) | Daily check-in and one-off moments, edit/delete, timeline | UIKit **View Code** + **VIP** |
+| **Consulta** (Consultation) | Pick a period and records, faithful preview and **PDF** export | SwiftUI + **MVVM** |
 
-## Como rodar (Mac)
+## Running it (Mac)
 
 ```bash
 brew install xcodegen swiftlint
 cd clara-ios
-xcodegen generate        # gera Clara.xcodeproj a partir do project.yml
+xcodegen generate        # generates Clara.xcodeproj from project.yml
 open Clara.xcodeproj
 ```
 
-Escolha um simulador de iPhone e rode (⌘R). Testes: ⌘U.
+Pick an iPhone simulator and run (⌘R). Tests: ⌘U.
 
-- **Snapshot tests:** a primeira execução grava as imagens de referência em `Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__` e **falha de propósito**. Rode de novo e eles passam. Faça commit das imagens.
-- **IA no aparelho:** precisa de iOS 26 + aparelho com Apple Intelligence (Mac Apple Silicon com Apple Intelligence ligado, ou iPhone 15 Pro ou mais novo). Num Mac Intel/VM, o app usa automaticamente as sugestões simples (NaturalLanguage) e mostra isso na tela.
-- **Remote config:** o app lê `config/remote-config.json` direto deste repositório no GitHub. Sem rede, usa o último valor em cache ou os valores embarcados.
-- Se a sua versão do XcodeGen não aceitar os testes do pacote no scheme, rode-os direto: `cd Packages/ClaraKit && xcodebuild test -scheme ClaraKit-Package -destination 'platform=iOS Simulator,name=iPhone 17'`.
+- **Snapshot tests:** the first run records the reference images in `Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__` and **fails on purpose**. Run again and they pass. Commit the images.
+- **On-device AI:** needs iOS 26 + a device with Apple Intelligence (an Apple Silicon Mac with Apple Intelligence on, or iPhone 15 Pro or newer). On an Intel Mac/VM, the app automatically uses the simple suggestions (NaturalLanguage) and says so on screen.
+- **Remote config:** the app reads `config/remote-config.json` straight from this GitHub repository. Offline, it uses the last cached value or the bundled defaults.
+- If your XcodeGen version does not accept the package tests in the scheme, run them directly: `cd Packages/ClaraKit && xcodebuild test -scheme ClaraKit-Package -destination 'platform=iOS Simulator,name=iPhone 17'`.
 
-Fastlane: `bundle install`, depois `bundle exec fastlane lint` ou `bundle exec fastlane test`.
+Fastlane: `bundle install`, then `bundle exec fastlane lint` or `bundle exec fastlane test`.
 
-Fluxos de ponta a ponta com [Maestro](https://maestro.dev), com o app instalado num simulador: `maestro test .maestro`.
+End-to-end flows with [Maestro](https://maestro.dev), with the app installed on a simulator: `maestro test .maestro`.
 
-## Guardrails para código gerado por IA
+## Guardrails for AI-generated code
 
-Este projeto foi escrito com ajuda de IA. Antes de qualquer código do app, o repositório ganhou
-verificações automáticas que a IA não consegue desligar: hooks do Claude Code, hook de pre-commit,
-CI com políticas, segredos, lint, testes, cobertura, Maestro e CodeQL, e regras na branch `main`.
-Detalhes em [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
+This project was written with AI assistance. Before any app code, the repository got automated
+checks the AI cannot turn off: Claude Code hooks, a pre-commit hook, CI with policies, secrets,
+lint, tests, coverage, Maestro and CodeQL, and rules on the `main` branch.
+Details in [docs/GUARDRAILS.md](docs/GUARDRAILS.md).
 
 ```bash
-scripts/install-git-hooks.sh   # uma vez por clone
+scripts/install-git-hooks.sh   # once per clone
 ```
 
-## Estrutura
+## Structure
 
 ```
-App/                      Target do app: composition root, abas, painel de privacidade, MetricKit
-AppUITests/               Testes de UI (XCUITest)
-Packages/ClaraKit/        Pacote SPM local com todos os módulos
+App/                      App target: composition root, tabs, privacy panel, MetricKit
+AppUITests/               UI tests (XCUITest)
+Packages/ClaraKit/        Local SPM package with every module
   Sources/
-    ClaraCore/            Modelos (structs), protocolos de repositório, resumo e HTML (puro)
-    ClaraStorage/         Banco local (actor) + repositórios
-    ClaraNetworking/      Cliente REST genérico (Endpoint com associatedtype, retry, erros)
-    ClaraServices/        Feature flags/A-B, remote config, analytics, crash reporting, feriados
-    ClaraAI/              Foundation Models (on-device) + fallback NaturalLanguage
-    ClaraLegacy/          Objective-C "legado" (formatador e store com completion handler)
-    ClaraDesignSystem/    Tokens (claro/escuro), tipografia com Dynamic Type, componentes
+    ClaraCore/            Models (structs), repository protocols, summary and HTML (pure)
+    ClaraStorage/         Local database (actor) + repositories
+    ClaraNetworking/      Generic REST client (Endpoint with associatedtype, retry, errors)
+    ClaraServices/        Feature flags/A-B, remote config, analytics, crash reporting, holidays
+    ClaraAI/              Foundation Models (on-device) + NaturalLanguage fallback
+    ClaraLegacy/          "Legacy" Objective-C (formatter and a store with completion handlers)
+    ClaraDesignSystem/    Tokens (light/dark), typography with Dynamic Type, components
     TodayFeature/         SwiftUI + MVVM-C
     RecordsFeature/       UIKit View Code + VIP
-    ConsultationFeature/  SwiftUI + MVVM, exportação PDF
-    ClaraTestSupport/     Dublês compartilhados entre as suítes
+    ConsultationFeature/  SwiftUI + MVVM, PDF export
+    ClaraTestSupport/     Test doubles shared across suites
   Tests/                  Swift Testing + snapshot tests
-config/remote-config.json Remote config servido pelo GitHub
-docs/                     Guardrails e ADRs
+config/remote-config.json Remote config served by GitHub
+docs/                     Guardrails and ADRs
 ```
 
-Grafo de dependências (as features não se conhecem; tudo aponta para `ClaraCore`):
+Dependency graph (features do not know each other; everything points to `ClaraCore`):
 
 ```
                  App (composition root)
@@ -80,7 +82,7 @@ Grafo de dependências (as features não se conhecem; tudo aponta para `ClaraCor
                  └──────────── ClaraCore ◀─────────────┘
 ```
 
-## Documentação
+## Documentation
 
-- [Guardrails para código gerado por IA](docs/GUARDRAILS.md)
-- Decisões de arquitetura: [modularização](docs/adr/0001-modularizacao-spm-xcodegen.md) · [uma arquitetura por feature](docs/adr/0002-arquitetura-por-feature.md) · [IA no aparelho](docs/adr/0003-ia-no-aparelho.md) · [guardrails para IA](docs/adr/0004-guardrails-codigo-gerado-por-ia.md)
+- [Guardrails for AI-generated code](docs/GUARDRAILS.md)
+- Architecture decisions: [modularization](docs/adr/0001-modularization-spm-xcodegen.md) · [one architecture per feature](docs/adr/0002-architecture-per-feature.md) · [on-device AI](docs/adr/0003-on-device-ai.md) · [guardrails for AI](docs/adr/0004-guardrails-for-ai-generated-code.md)

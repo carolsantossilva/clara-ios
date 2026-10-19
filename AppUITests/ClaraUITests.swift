@@ -1,21 +1,21 @@
 import XCTest
 
-/// Testes de UI: auditoria de acessibilidade de cada aba e a validação do formulário.
-/// O app abre com `-ui-testing`: banco em memória e sem rede, então cada teste começa
-/// do zero e não depende de internet.
+/// UI tests: an accessibility audit of each tab and the form validation.
+/// The app launches with `-ui-testing`: an in-memory database and no network, so each
+/// test starts from scratch and needs no internet.
 ///
-/// As jornadas (criar tarefa, anotar, check-in) ficam no Maestro (`.maestro/`). Aqui
-/// fica o que o Maestro não faz: a auditoria da Apple confere a tela aberta (contraste,
-/// área de toque, elementos sem rótulo, texto cortado, Dynamic Type).
+/// The journeys (create a task, park a note, check in) live in Maestro (`.maestro/`).
+/// This file covers what Maestro cannot: Apple's audit checks the open screen (contrast,
+/// hit regions, missing labels, clipped text, Dynamic Type).
 ///
-/// Contra flakiness: localizar elementos por `accessibilityIdentifier` (não por
-/// texto que muda) e usar `waitForExistence` em vez de `sleep`.
+/// Against flakiness: find elements by `accessibilityIdentifier` (not by text that
+/// changes) and use `waitForExistence` instead of `sleep`.
 ///
-/// A auditoria registra cada problema como uma falha; `auditAccessibility` liga
-/// `continueAfterFailure` para o relatório trazer todos de uma vez, não só o primeiro.
+/// The audit records each issue as a failure; `auditAccessibility` turns on
+/// `continueAfterFailure` so the report lists all of them at once, not only the first.
 ///
-/// `XCUIApplication` é isolado no main actor: cada teste é `@MainActor` e abre o
-/// próprio app (o padrão do template do Xcode), em vez de guardar o app no `setUp`.
+/// `XCUIApplication` is isolated to the main actor: each test is `@MainActor` and launches
+/// its own app (the Xcode template pattern) instead of keeping the app from `setUp`.
 final class ClaraUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
@@ -35,7 +35,7 @@ final class ClaraUITests: XCTestCase {
         try app.performAccessibilityAudit()
     }
 
-    // MARK: Auditoria de acessibilidade
+    // MARK: Accessibility audit
 
     @MainActor
     func testTodayPassesAccessibilityAudit() throws {
@@ -44,7 +44,7 @@ final class ClaraUITests: XCTestCase {
         try auditAccessibility(app)
     }
 
-    /// Com um registro salvo, para a auditoria também cobrir a célula da linha do tempo.
+    /// With a saved record, so the audit also covers the timeline cell.
     @MainActor
     func testRecordsPassesAccessibilityAudit() throws {
         let app = launchApp()
@@ -67,7 +67,7 @@ final class ClaraUITests: XCTestCase {
         try auditAccessibility(app)
     }
 
-    // MARK: Validação do formulário
+    // MARK: Form validation
 
     @MainActor
     func testEmptyCheckInAsksForContent() {

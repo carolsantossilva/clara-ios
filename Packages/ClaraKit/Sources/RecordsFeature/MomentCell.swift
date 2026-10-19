@@ -1,11 +1,11 @@
 import ClaraDesignSystem
 import UIKit
 
-/// Célula em View Code com Auto Layout por âncoras.
+/// A View Code cell with anchor-based Auto Layout.
 ///
-/// Acessibilidade: o VoiceOver lê a célula como um único elemento (texto completo)
-/// e oferece "Editar" e "Excluir" como ações personalizadas (rotor), em vez de
-/// obrigar a navegar por cada botão pequeno.
+/// Accessibility: VoiceOver reads the cell as a single element (full text)
+/// and offers "Editar" (edit) and "Excluir" (delete) as custom actions (rotor), instead of
+/// forcing navigation through each small button.
 final class MomentCell: UITableViewCell {
     static let reuseIdentifier = "MomentCell"
 
@@ -36,8 +36,8 @@ final class MomentCell: UITableViewCell {
         fatalError("Use View Code")
     }
 
-    // Células são reaproveitadas: limpar closures evita que um toque numa célula
-    // reciclada execute a ação da linha antiga.
+    // Cells are reused: clearing closures keeps a tap on a recycled cell from
+    // running the old row's action.
     override func prepareForReuse() {
         super.prepareForReuse()
         onEdit = nil
@@ -58,7 +58,7 @@ final class MomentCell: UITableViewCell {
 
     private func set(_ label: UILabel, _ text: String?) {
         label.text = text
-        // Dentro de UIStackView, `isHidden` também remove o espaço ocupado.
+        // Inside a UIStackView, `isHidden` also removes the space it took.
         label.isHidden = text == nil
     }
 
@@ -107,7 +107,7 @@ final class MomentCell: UITableViewCell {
         moodTagLabel.layer.cornerRadius = 10
         moodTagLabel.clipsToBounds = true
         moodTagLabel.setContentHuggingPriority(.required, for: .horizontal)
-        // A data quebra em várias linhas; a tag não pode ser espremida até sumir o texto.
+        // The date wraps over several lines; the tag must not be squeezed until its text disappears.
         moodTagLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         dateLabel.font = ClaraFont.uiFont(.caption1)
@@ -123,7 +123,7 @@ final class MomentCell: UITableViewCell {
         emptyNoteLabel.textColor = ClaraPalette.muted
         emptyNoteLabel.numberOfLines = 0
 
-        // Dynamic Type: as fontes acompanham o tamanho escolhido nos Ajustes.
+        // Dynamic Type: fonts follow the size chosen in Settings.
         for label in [moodTagLabel, dateLabel, noteLabel, contextLabel, helpedLabel, emptyNoteLabel] as [UILabel] {
             label.adjustsFontForContentSizeCategory = true
         }
@@ -175,8 +175,8 @@ final class MomentCell: UITableViewCell {
         ])
     }
 
-    // `cgColor` não é dinâmico: ao trocar claro/escuro, a borda precisa ser refeita.
-    // API de traits do iOS 17 (substitui `traitCollectionDidChange`).
+    // `cgColor` is not dynamic: when switching light/dark, the border has to be redone.
+    // iOS 17 traits API (replaces `traitCollectionDidChange`).
     private func observeAppearanceChanges() {
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (cell: MomentCell, _: UITraitCollection) in
             cell.card.layer.borderColor = ClaraPalette.line.resolvedColor(with: cell.traitCollection).cgColor
@@ -184,7 +184,7 @@ final class MomentCell: UITableViewCell {
     }
 }
 
-/// UILabel com respiro interno (para as "tags").
+/// A UILabel with inner padding (for the "tags").
 final class PaddedLabel: UILabel {
     var insets = UIEdgeInsets(top: 4, left: 8, bottom: 4, right: 8)
 

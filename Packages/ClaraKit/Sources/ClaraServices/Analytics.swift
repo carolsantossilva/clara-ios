@@ -15,20 +15,20 @@ public protocol AnalyticsTracker: Sendable {
     func track(_ event: AnalyticsEvent)
 }
 
-// MARK: - Destinos com associatedtype + type erasure
+// MARK: - Destinations with associatedtype + type erasure
 
-/// Cada ferramenta (Firebase, Amplitude, Mixpanel, log local) quer o evento num
-/// formato próprio: `Payload`. Por causa do associatedtype, não dá para guardar
-/// `[any AnalyticsDestination]` e chamar `deliver` diretamente sem abrir o tipo —
-/// por isso existe o `AnyAnalyticsDestination` logo abaixo.
+/// Each tool (Firebase, Amplitude, Mixpanel, local log) wants the event in its own
+/// format: `Payload`. Because of the associatedtype, you cannot store
+/// `[any AnalyticsDestination]` and call `deliver` directly without opening the type,
+/// which is why `AnyAnalyticsDestination` exists right below.
 public protocol AnalyticsDestination: Sendable {
     associatedtype Payload
     func makePayload(for event: AnalyticsEvent) -> Payload?
     func deliver(_ payload: Payload)
 }
 
-/// Type erasure: esconde o `Payload` concreto atrás de uma closure, permitindo
-/// uma lista heterogênea de destinos.
+/// Type erasure: hides the concrete `Payload` behind a closure, allowing
+/// a heterogeneous list of destinations.
 public struct AnyAnalyticsDestination: AnalyticsTracker {
     public let name: String
     private let trackEvent: @Sendable (AnalyticsEvent) -> Void
@@ -46,7 +46,7 @@ public struct AnyAnalyticsDestination: AnalyticsTracker {
     }
 }
 
-/// Destino de desenvolvimento: escreve no Console/Xcode via os.Logger.
+/// Development destination: writes to Console/Xcode through os.Logger.
 public struct ConsoleAnalyticsDestination: AnalyticsDestination {
     private let logger = Logger(subsystem: "app.clara", category: "analytics")
 
@@ -65,7 +65,7 @@ public struct ConsoleAnalyticsDestination: AnalyticsDestination {
     }
 }
 
-/// Destino que guarda os últimos eventos na memória (painel de diagnóstico e testes).
+/// Destination that keeps the latest events in memory (diagnostics panel and tests).
 public struct BufferAnalyticsDestination: AnalyticsDestination {
     private let buffer: AnalyticsEventBuffer
 
@@ -80,20 +80,20 @@ public struct BufferAnalyticsDestination: AnalyticsDestination {
     }
 }
 
-// MARK: - Buffer thread-safe com lock
+// MARK: - Thread-safe buffer with a lock
 
-/// Guarda os últimos eventos, lidos e escritos de qualquer thread.
+/// Keeps the latest events, read and written from any thread.
 ///
-/// Por que não GCD (fila concorrente com `sync` nas leituras e `.barrier` nas
-/// escritas)? Era a versão anterior, e travava no CI: `sync` bloqueia a thread que
-/// chama. Chamado de dentro de uma Task, bloqueia uma thread do pool cooperativo do
-/// Swift Concurrency, que tem uma thread por núcleo. Com poucos núcleos, o GCD não
-/// criava thread nova para rodar a escrita e as leituras esperavam para sempre.
+/// Why not GCD (a concurrent queue with `sync` reads and `.barrier` writes)? That
+/// was the previous version, and it hung on CI: `sync` blocks the calling thread.
+/// Called from inside a Task, it blocks a thread of the Swift Concurrency
+/// cooperative pool, which has one thread per core. With few cores, GCD did not
+/// start a new thread to run the write and the reads waited forever.
 ///
-/// O lock só segura a thread pelo tempo de copiar um array, e o compilador confere
-/// a thread safety (`OSAllocatedUnfairLock` é Sendable), sem `@unchecked`.
-/// Com Swift Concurrency puro, o equivalente seria um `actor` — mas aí toda leitura
-/// viraria `await`, o que não serve para quem chama de código síncrono.
+/// The lock holds the thread only long enough to copy an array, and the compiler
+/// checks thread safety (`OSAllocatedUnfairLock` is Sendable), without `@unchecked`.
+/// With pure Swift Concurrency, the equivalent would be an `actor`, but then every
+/// read would become `await`, which does not work for synchronous callers.
 public final class AnalyticsEventBuffer: Sendable {
     private let storage = OSAllocatedUnfairLock(initialState: [AnalyticsEvent]())
     private let capacity: Int
@@ -116,14 +116,14 @@ public final class AnalyticsEventBuffer: Sendable {
     }
 }
 
-// MARK: - Serviço com consentimento
+// MARK: - Service with consent
 
-/// O Clara nasceu sem analytics. Aqui o rastreamento é opt-in, desligado por padrão,
-/// e os eventos nunca carregam texto escrito pela usuária (veja `ClaraEvent`).
+/// Clara was born without analytics. Here tracking is opt-in, off by default,
+/// and events never carry text written by the user (see `ClaraEvent`).
 public final class AnalyticsService: AnalyticsTracker, Sendable {
     private let destinations: [AnyAnalyticsDestination]
-    // O lock guarda o estado e é Sendable: o compilador confere a thread safety,
-    // sem precisar de @unchecked (como no AnalyticsEventBuffer, acima).
+    // The lock holds the state and is Sendable: the compiler checks thread safety,
+    // with no need for @unchecked (as in AnalyticsEventBuffer, above).
     private let consent: OSAllocatedUnfairLock<Bool>
 
     public init(destinations: [AnyAnalyticsDestination], hasConsent: Bool) {
@@ -144,10 +144,10 @@ public final class AnalyticsService: AnalyticsTracker, Sendable {
     }
 }
 
-// MARK: - Catálogo de eventos
+// MARK: - Event catalog
 
-/// Todos os eventos do app num só lugar. Propriedades são enums/números, nunca o
-/// conteúdo de tarefas ou registros.
+/// Every app event in one place. Properties are enums/numbers, never the
+/// content of tasks or records.
 public enum ClaraEvent: Equatable, Sendable {
     case taskCreated(hasFirstStep: Bool)
     case focusStarted(minutes: Int, variant: String?)

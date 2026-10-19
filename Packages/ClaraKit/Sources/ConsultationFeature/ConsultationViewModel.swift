@@ -26,8 +26,8 @@ public struct ConsultationDependencies: Sendable {
     }
 }
 
-/// MVVM simples, sem Coordinator: a tela não navega para lugar nenhum.
-/// Adicionar um Coordinator aqui seria cerimônia sem ganho — escolha consciente.
+/// Plain MVVM, no Coordinator: the screen navigates nowhere.
+/// Adding a Coordinator here would be ceremony with no gain, a deliberate choice.
 @MainActor
 @Observable
 public final class ConsultationViewModel {
@@ -50,7 +50,7 @@ public final class ConsultationViewModel {
         self.startDate = Calendar.current.date(byAdding: .day, value: -6, to: today) ?? today
     }
 
-    // MARK: Estado derivado (recalculado a cada leitura; barato para dezenas de registros)
+    // MARK: Derived state (recomputed on every read; cheap for dozens of records)
 
     var startDay: LocalDay { LocalDay(startDate, in: .current) }
     var endDay: LocalDay { LocalDay(endDate, in: .current) }
@@ -66,12 +66,12 @@ public final class ConsultationViewModel {
         )
     }
 
-    // MARK: Ações
+    // MARK: Actions
 
     public func load() async {
         do {
             moments = try await dependencies.repository.list()
-            // Como no app original: tudo começa selecionado; a usuária desmarca o que não quer levar.
+            // As in the original app: everything starts selected; the user unchecks what she does not want to bring.
             selectedIDs = Set(moments.map(\.id))
         } catch is CancellationError {
             return

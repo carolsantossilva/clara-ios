@@ -3,11 +3,11 @@ import ClaraDesignSystem
 import ClaraServices
 import SwiftUI
 
-/// Tela Hoje. Views em SwiftUI são *descrições* baratas da interface: o `body`
-/// pode ser recalculado muitas vezes, por isso não guardamos estado nelas — ele
-/// fica no ViewModel (`@Observable`) ou em `@State` para coisas locais da view.
+/// The Today screen. SwiftUI views are cheap *descriptions* of the interface: `body`
+/// can be recomputed many times, so we keep no state in them; it lives in the
+/// ViewModel (`@Observable`) or in `@State` for view-local things.
 struct TodayView: View {
-    // `@Bindable` permite criar bindings (`$viewModel.parkingText`) para um objeto @Observable.
+    // `@Bindable` allows creating bindings (`$viewModel.parkingText`) to an @Observable object.
     @Bindable var viewModel: TodayViewModel
 
     var body: some View {
@@ -38,13 +38,13 @@ struct TodayView: View {
             .padding(.bottom, ClaraSpacing.extraLarge)
         }
         .background(ClaraColor.background.ignoresSafeArea())
-        // `.task` começa quando a view aparece e é cancelada quando ela some.
+        // `.task` starts when the view appears and is cancelled when it goes away.
         .task { await viewModel.onAppear() }
         .claraAlert($viewModel.alert)
     }
 }
 
-// MARK: - Foco
+// MARK: - Focus
 
 private struct FocusSection: View {
     let viewModel: TodayViewModel
@@ -149,8 +149,8 @@ private struct FocusActions: View {
     }
 }
 
-/// View pequena e separada de propósito: só ela lê `remainingSeconds`, então só
-/// ela redesenha a cada segundo — e não a tela inteira.
+/// A small view, separate on purpose: only it reads `remainingSeconds`, so only
+/// it redraws every second, not the whole screen.
 private struct TimerView: View {
     let timer: FocusTimer
 
@@ -172,7 +172,7 @@ private struct TimerView: View {
     }
 }
 
-// MARK: - Outras tarefas
+// MARK: - Other tasks
 
 private struct OtherTasksSection: View {
     let viewModel: TodayViewModel
@@ -223,7 +223,7 @@ private struct OtherTasksSection: View {
     }
 }
 
-// MARK: - Guardar para depois
+// MARK: - Park for later
 
 private struct ParkingSection: View {
     @Bindable var viewModel: TodayViewModel
@@ -280,7 +280,7 @@ private struct ParkingSection: View {
     }
 }
 
-// MARK: - Feriado
+// MARK: - Holiday
 
 private struct HolidayBanner: View {
     let holiday: Holiday

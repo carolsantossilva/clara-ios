@@ -1,9 +1,9 @@
 import SwiftUI
 import UIKit
 
-// Tokens do Design System, portados de `theme/tokens.ts` do app React Native.
-// A fonte da verdade é UIColor dinâmica (claro/escuro); SwiftUI e UIKit leem a
-// mesma cor, então as duas camadas de UI nunca divergem.
+// Design system tokens, ported from the React Native app's `theme/tokens.ts`.
+// The source of truth is a dynamic UIColor (light/dark); SwiftUI and UIKit read the
+// same color, so the two UI layers never drift apart.
 
 public enum ClaraPalette {
     public static let background = UIColor.dynamic(light: 0xF8F5F1, dark: 0x1B1920)
@@ -53,18 +53,18 @@ public enum ClaraSpacing {
     public static let extraLarge: CGFloat = 28
 }
 
-/// Tipografia baseada em estilos de texto: tudo acompanha o Dynamic Type.
-/// Evite `caption2`: ele já está no tamanho mínimo (11 pt) no tamanho padrão e não
-/// diminui com o ajuste do sistema; a auditoria de acessibilidade aponta isso.
+/// Typography based on text styles: everything follows Dynamic Type.
+/// Avoid `caption2`: it is already at its minimum size (11 pt) at the default setting and
+/// does not shrink with the system setting; the accessibility audit flags it.
 public enum ClaraFont {
     public static let largeTitle = Font.system(.largeTitle, design: .serif)
     public static let title = Font.system(.title2, design: .serif)
     public static let headline = Font.system(.title3, design: .serif)
     public static let eyebrow = Font.caption.weight(.heavy)
 
-    /// Versão UIKit. Cria a fonte no tamanho base e escala com `UIFontMetrics`, para
-    /// que `adjustsFontForContentSizeCategory` funcione também com fonte serifada.
-    /// `traits`: escala para o tamanho de texto dessa tela; sem ele, usa o do app.
+    /// UIKit version. Creates the font at the base size and scales it with `UIFontMetrics`,
+    /// so `adjustsFontForContentSizeCategory` also works with the serif font.
+    /// `traits`: scales to the text size of that screen; without it, uses the app's.
     public static func uiFont(
         _ style: UIFont.TextStyle,
         serif: Bool = false,
@@ -84,11 +84,11 @@ public enum ClaraFont {
 }
 
 extension UIButton {
-    /// Fontes de um botão com `UIButton.Configuration` que acompanham o Dynamic Type.
+    /// Fonts of a button with `UIButton.Configuration` that follow Dynamic Type.
     ///
-    /// Botão com configuração não tem `adjustsFontForContentSizeCategory`, e o
-    /// transformer de atributos não enxerga as traits do botão. O update handler
-    /// enxerga: a fonte é refeita com o tamanho de texto da tela sempre que ele muda.
+    /// A configured button has no `adjustsFontForContentSizeCategory`, and the
+    /// attributes transformer cannot see the button's traits. The update handler can:
+    /// the font is rebuilt with the screen's text size whenever it changes.
     public func scalesConfigurationFonts(
         title: UIFont.TextStyle,
         titleWeight: UIFont.Weight? = nil,
@@ -98,7 +98,7 @@ extension UIButton {
         configurationUpdateHandler = { button in
             guard var configuration = button.configuration else { return }
             let titleFont = ClaraFont.uiFont(title, weight: titleWeight, compatibleWith: button.traitCollection)
-            // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
+            // Attribute accessed by type: the `updated.font` key path is not Sendable in the transformer.
             configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
                 var updated = attributes
                 updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = titleFont

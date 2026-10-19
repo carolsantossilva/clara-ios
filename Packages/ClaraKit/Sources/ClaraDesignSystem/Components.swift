@@ -1,10 +1,10 @@
 import ClaraCore
 import SwiftUI
 
-// MARK: - Botões
+// MARK: - Buttons
 
-/// Um `ButtonStyle` customizado: o botão continua sendo um `Button` nativo
-/// (VoiceOver, foco de teclado, estados), só a aparência muda.
+/// A custom `ButtonStyle`: the button is still a native `Button`
+/// (VoiceOver, keyboard focus, states); only the look changes.
 public struct ClaraButtonStyle: ButtonStyle {
     public enum Kind {
         case primary
@@ -39,7 +39,7 @@ extension ButtonStyle where Self == ClaraButtonStyle {
     public static var claraSecondary: ClaraButtonStyle { ClaraButtonStyle(kind: .secondary) }
 }
 
-// MARK: - Cartão
+// MARK: - Card
 
 public struct ClaraCardModifier: ViewModifier {
     let background: Color
@@ -68,7 +68,7 @@ extension View {
     }
 }
 
-// MARK: - Textos
+// MARK: - Text
 
 public struct EyebrowText: View {
     let text: String
@@ -82,7 +82,7 @@ public struct EyebrowText: View {
             .font(ClaraFont.eyebrow)
             .tracking(1.2)
             .foregroundStyle(ClaraColor.eyebrow)
-            // Com letra grande, quebra a linha em vez de cortar o texto.
+            // At large text sizes, wrap instead of clipping.
             .fixedSize(horizontal: false, vertical: true)
     }
 }
@@ -145,7 +145,7 @@ public struct PageHeading: View {
     }
 }
 
-// MARK: - Campo de texto com rótulo
+// MARK: - Labeled text field
 
 public struct LabeledTextField: View {
     let label: String
@@ -155,8 +155,8 @@ public struct LabeledTextField: View {
     let identifier: String?
     @Binding var text: String
 
-    /// `identifier` vai no campo, não no container: assim testes de UI e Maestro
-    /// tocam no próprio TextField em vez de no rótulo.
+    /// `identifier` goes on the field, not on the container, so UI tests and Maestro
+    /// tap the TextField itself instead of the label.
     public init(
         _ label: String,
         text: Binding<String>,
@@ -190,9 +190,9 @@ public struct LabeledTextField: View {
     }
 }
 
-// MARK: - Seletor de humor
+// MARK: - Mood picker
 
-/// Três opções com rótulo e ícone: a informação nunca depende só da cor.
+/// Three options with a label and an icon: the information never depends on color alone.
 public struct MoodPicker: View {
     @Binding var selection: Mood?
 
@@ -201,7 +201,7 @@ public struct MoodPicker: View {
     }
 
     public var body: some View {
-        // ViewThatFits: em Dynamic Type muito grande, troca a linha por coluna.
+        // ViewThatFits: at very large Dynamic Type sizes, swaps the row for a column.
         ViewThatFits(in: .horizontal) {
             HStack(spacing: ClaraSpacing.small) { options }
             VStack(alignment: .leading, spacing: ClaraSpacing.small) { options }
@@ -214,7 +214,7 @@ public struct MoodPicker: View {
         ForEach(Mood.allCases, id: \.self) { mood in
             let isSelected = selection == mood
             Button {
-                // Tocar de novo desmarca: escolher uma palavra é sempre opcional.
+                // Tapping again deselects: picking a word is always optional.
                 selection = isSelected ? nil : mood
             } label: {
                 HStack(spacing: 6) {
@@ -238,7 +238,7 @@ public struct MoodPicker: View {
     }
 }
 
-// MARK: - Estado vazio
+// MARK: - Empty state
 
 public struct EmptyStateView: View {
     public init() {}
@@ -261,11 +261,11 @@ public struct EmptyStateView: View {
     }
 }
 
-// MARK: - Marca
+// MARK: - Brand
 
 public struct BrandHeader<Badge: View>: View {
     let badge: Badge
-    // O quadrado da marca cresce junto com a letra, para o "c" não ser cortado.
+    // The brand square grows with the letter, so the "c" is not clipped.
     @ScaledMetric(relativeTo: .title) private var markSize: CGFloat = 34
 
     public init(@ViewBuilder badge: () -> Badge) {
@@ -312,7 +312,7 @@ public struct LocalOnlyBadge: View {
     }
 }
 
-// MARK: - Alerta
+// MARK: - Alert
 
 public struct AlertContent: Identifiable, Equatable, Sendable {
     public let id = UUID()

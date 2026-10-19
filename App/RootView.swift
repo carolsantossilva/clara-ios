@@ -4,8 +4,8 @@ import RecordsFeature
 import SwiftUI
 import TodayFeature
 
-/// Navegação principal: três abas, como no app original.
-/// Cada aba é uma feature independente, cada uma com a arquitetura que fez sentido.
+/// Main navigation: three tabs, as in the original app.
+/// Each tab is an independent feature, each with the architecture that made sense.
 struct RootView: View {
     let environment: AppEnvironment
 
@@ -24,7 +24,7 @@ struct RootView: View {
                 .tabItem { Label("Hoje", systemImage: "sun.max") }
                 .tag(Tab.today)
 
-            // UIKit (View Code) + VIP, embutido via UIViewControllerRepresentable
+            // UIKit (View Code) + VIP, embedded through UIViewControllerRepresentable
             RecordsScreen(dependencies: environment.recordsDependencies)
                 .background(ClaraColor.background.ignoresSafeArea())
                 .tabItem { Label("Registros", systemImage: "book.closed") }

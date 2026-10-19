@@ -1,6 +1,6 @@
 import ClaraAI
 
-// MARK: - IA
+// MARK: - AI
 
 public struct StubStepSuggester: StepSuggesting {
     public enum Behavior: Sendable {

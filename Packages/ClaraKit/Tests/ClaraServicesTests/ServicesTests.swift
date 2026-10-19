@@ -4,10 +4,10 @@ import Foundation
 import Testing
 @testable import ClaraServices
 
-@Suite("Feature flags e A/B")
+@Suite("Feature flags and A/B")
 @MainActor
 struct FeatureFlagsTests {
-    @Test("sorteio do A/B é estável para a mesma instalação")
+    @Test("A/B assignment is stable for the same installation")
     func bucketingIsDeterministic() {
         let variants = ["15", "25"]
         let first = Bucketing.variant(for: "focus_duration", installationID: "abc", variants: variants)
@@ -16,27 +16,27 @@ struct FeatureFlagsTests {
         }
     }
 
-    @Test("sorteio distribui instalações entre as variantes")
+    @Test("assignment spreads installations across variants")
     func bucketingSpreadsUsers() {
         let counts = (0..<1_000).reduce(into: [String: Int]()) { counts, index in
             let variant = Bucketing.variant(for: "focus_duration", installationID: "install-\(index)", variants: ["15", "25"])
             counts[variant ?? "nil", default: 0] += 1
         }
-        // Tolerância larga de propósito: o teste verifica distribuição, não sorte.
+        // Wide tolerance on purpose: the test checks distribution, not luck.
         #expect((350...650).contains(counts["15", default: 0]))
     }
 
-    @Test("override local vence o remoto, que vence o padrão")
+    @Test("local override beats remote, which beats the default")
     func overridePrecedence() {
         let flags = FeatureFlags(config: RemoteConfig(flags: ["holiday_banner": false], experiments: [:]))
         #expect(!flags.isEnabled(.holidayBanner))
-        #expect(flags.isEnabled(.aiStepSuggestions), "ausente no remoto → usa o padrão embarcado")
+        #expect(flags.isEnabled(.aiStepSuggestions), "missing remotely → uses the bundled default")
 
         flags.overrides[.holidayBanner] = true
         #expect(flags.isEnabled(.holidayBanner))
     }
 
-    @Test("sem ID de instalação, usa a primeira variante (controle)")
+    @Test("without an installation ID, uses the first variant (control)")
     func controlWithoutInstallationID() {
         let flags = FeatureFlags(config: RemoteConfig(flags: [:], experiments: ["focus_duration": ["15", "25"]]))
         #expect(flags.variant(.focusDuration) == "15")
@@ -45,7 +45,7 @@ struct FeatureFlagsTests {
 
 @Suite("Remote config")
 struct RemoteConfigLoaderTests {
-    @Test("rede falhou e não há cache: usa os valores padrão")
+    @Test("network failed and no cache: uses the default values")
     func fallsBackToDefaults() async {
         let client = FakeHTTPClient { _ in throw TestError() }
         let loader = RemoteConfigLoader(client: client, path: "/config.json", cacheSuiteName: "test-\(UUID().uuidString)")
@@ -56,7 +56,7 @@ struct RemoteConfigLoaderTests {
         #expect(source == .defaults)
     }
 
-    @Test("rede falhou depois de um sucesso: usa o último valor salvo")
+    @Test("network failed after a success: uses the last saved value")
     func fallsBackToCache() async {
         let suite = "test-\(UUID().uuidString)"
         let remote = RemoteConfig(flags: ["holiday_banner": false], experiments: [:])
@@ -69,9 +69,9 @@ struct RemoteConfigLoaderTests {
     }
 }
 
-@Suite("Feriados (BrasilAPI)")
+@Suite("Holidays (BrasilAPI)")
 struct HolidayServiceTests {
-    @Test("chamadas simultâneas para o mesmo ano fazem uma única requisição")
+    @Test("concurrent calls for the same year make a single request")
     func deduplicatesInFlightRequests() async throws {
         let client = FakeHTTPClient { _ in
             try await Task.sleep(for: .milliseconds(50))
@@ -88,7 +88,7 @@ struct HolidayServiceTests {
         #expect(client.requestedPaths == ["/api/feriados/v1/2026"])
     }
 
-    @Test("janela que cruza o ano novo busca os dois anos")
+    @Test("a window crossing New Year fetches both years")
     func crossesYearBoundary() async throws {
         let client = FakeHTTPClient { path in
             path.hasSuffix("2027") ? [Holiday(date: "2027-01-01", name: "Confraternização mundial")] : [Holiday]()
@@ -104,7 +104,7 @@ struct HolidayServiceTests {
 
 @Suite("Analytics")
 struct AnalyticsTests {
-    @Test("sem consentimento, nada é enviado")
+    @Test("without consent, nothing is sent")
     func respectsConsent() {
         let buffer = AnalyticsEventBuffer()
         let service = AnalyticsService(destinations: [AnyAnalyticsDestination(BufferAnalyticsDestination(buffer: buffer))], hasConsent: false)
@@ -117,14 +117,14 @@ struct AnalyticsTests {
         #expect(buffer.events.map(\.name) == ["task_completed"])
     }
 
-    @Test("buffer mantém só os eventos mais recentes")
+    @Test("the buffer keeps only the most recent events")
     func bufferCapacity() {
         let buffer = AnalyticsEventBuffer(capacity: 2)
         ["a", "b", "c"].forEach { buffer.append(AnalyticsEvent(name: $0)) }
         #expect(buffer.events.map(\.name) == ["b", "c"])
     }
 
-    @Test("escritas concorrentes não perdem eventos")
+    @Test("concurrent writes lose no events")
     func concurrentWrites() async {
         let buffer = AnalyticsEventBuffer(capacity: 1_000)
         await withTaskGroup(of: Void.self) { group in

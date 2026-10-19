@@ -3,18 +3,18 @@ import Foundation
 import Observation
 
 public enum FeatureFlag: String, CaseIterable, Sendable {
-    /// Sugestão de passos pequenos com IA no aparelho.
+    /// Small-step suggestions with on-device AI.
     case aiStepSuggestions = "ai_step_suggestions"
-    /// Aviso de feriado próximo na tela Hoje (dados da BrasilAPI).
+    /// Upcoming holiday notice on the Today screen (BrasilAPI data).
     case holidayBanner = "holiday_banner"
 }
 
 public enum Experiment: String, CaseIterable, Sendable {
-    /// Teste A/B: sessão de foco de 15 ou 25 minutos.
+    /// A/B test: 15- or 25-minute focus session.
     case focusDuration = "focus_duration"
 }
 
-/// Formato do JSON de remote config (veja `config/remote-config.json` na raiz do repo).
+/// Remote config JSON format (see `config/remote-config.json` at the repo root).
 public struct RemoteConfig: Codable, Equatable, Sendable {
     public var flags: [String: Bool]
     public var experiments: [String: [String]]
@@ -24,7 +24,7 @@ public struct RemoteConfig: Codable, Equatable, Sendable {
         self.experiments = experiments
     }
 
-    /// Valores embarcados no app: se a rede falhar, o app funciona igual.
+    /// Values bundled in the app: if the network fails, the app works the same.
     public static let defaults = RemoteConfig(
         flags: [
             FeatureFlag.aiStepSuggestions.rawValue: true,
@@ -42,17 +42,17 @@ public enum RemoteConfigSource: String, Sendable {
     case remote
 }
 
-/// Estado atual das flags, observável pelas telas.
+/// Current flag state, observable by the screens.
 ///
-/// `@MainActor`: as flags são lidas pela UI; isolar no main actor evita locks e
-/// garante que uma mudança de flag sempre redesenha a tela na thread certa.
+/// `@MainActor`: flags are read by the UI; isolating them on the main actor avoids locks
+/// and guarantees that a flag change always redraws the screen on the right thread.
 @MainActor
 @Observable
 public final class FeatureFlags {
     public private(set) var config: RemoteConfig
     public private(set) var source: RemoteConfigSource
     public private(set) var installationID: String?
-    /// Sobrescritas locais (painel de diagnóstico). Têm prioridade sobre o remoto.
+    /// Local overrides (diagnostics panel). They take priority over remote values.
     public var overrides: [FeatureFlag: Bool] = [:]
 
     public init(
@@ -72,8 +72,8 @@ public final class FeatureFlags {
             ?? false
     }
 
-    /// Variante sorteada de forma estável para esta instalação.
-    /// Sem ID de instalação ainda, devolve a primeira variante (grupo de controle).
+    /// Variant assigned stably to this installation.
+    /// Without an installation ID yet, returns the first variant (control group).
     public func variant(_ experiment: Experiment) -> String? {
         let variants = config.experiments[experiment.rawValue]
             ?? RemoteConfig.defaults.experiments[experiment.rawValue]
@@ -93,9 +93,9 @@ public final class FeatureFlags {
 }
 
 public enum Bucketing {
-    /// Por que não `hashValue`? Em Swift, `Hasher` usa uma semente aleatória por
-    /// execução: o mesmo texto dá hashes diferentes a cada abertura do app, e a
-    /// usuária trocaria de grupo do A/B. FNV-1a é determinístico.
+    /// Why not `hashValue`? In Swift, `Hasher` uses a random seed per process:
+    /// the same text hashes differently every time the app opens, and the user
+    /// would switch A/B groups. FNV-1a is deterministic.
     public static func variant(for experiment: String, installationID: String, variants: [String]) -> String? {
         guard !variants.isEmpty else { return nil }
         let hash = fnv1a("\(experiment):\(installationID)")
@@ -117,7 +117,7 @@ struct RemoteConfigEndpoint: Endpoint {
     let path: String
 }
 
-/// Busca o remote config com fallback em camadas: rede → último valor salvo → padrão.
+/// Fetches the remote config with layered fallback: network → last saved value → default.
 public struct RemoteConfigLoader: Sendable {
     private let client: any HTTPClient
     private let path: String
@@ -143,8 +143,8 @@ public struct RemoteConfigLoader: Sendable {
         }
     }
 
-    // UserDefaults é criado na hora em vez de guardado: assim a struct continua
-    // trivialmente Sendable.
+    // UserDefaults is created on demand instead of stored, so the struct stays
+    // trivially Sendable.
     private var defaults: UserDefaults {
         cacheSuiteName.flatMap(UserDefaults.init(suiteName:)) ?? .standard
     }

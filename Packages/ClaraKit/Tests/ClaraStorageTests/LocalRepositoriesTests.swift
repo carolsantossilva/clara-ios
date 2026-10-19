@@ -5,11 +5,11 @@ import os
 import Testing
 @testable import ClaraStorage
 
-@Suite("Repositórios locais")
+@Suite("Local repositories")
 struct LocalRepositoriesTests {
     let t0 = Fixtures.date("2026-09-20T10:00:00Z")
 
-    @Test("cria tarefa sem espaços nas pontas e lista as abertas da mais recente para a mais antiga")
+    @Test("creates a trimmed task and lists open ones from newest to oldest")
     func createsAndListsTasks() async throws {
         let database = LocalDatabase(inMemory: .init())
         let clock = TestNow(t0)
@@ -24,7 +24,7 @@ struct LocalRepositoriesTests {
         #expect(second.nextAction == "abrir")
     }
 
-    @Test("pausar incrementa a revisão e tarefas concluídas saem da lista")
+    @Test("pausing bumps the revision and completed tasks leave the list")
     func pauseAndComplete() async throws {
         let repository = LocalTaskRepository(database: LocalDatabase(inMemory: .init()))
         let task = try await repository.create(title: "Exames", nextAction: "")
@@ -38,7 +38,7 @@ struct LocalRepositoriesTests {
         #expect(try await repository.listOpen().isEmpty)
     }
 
-    @Test("editar uma versão antiga falha com conflito em vez de sobrescrever")
+    @Test("editing a stale version fails with a conflict instead of overwriting")
     func optimisticConcurrency() async throws {
         let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()))
         let created = try await repository.create(MomentDraft(kind: .event, occurredAt: t0, note: "original"))
@@ -47,7 +47,7 @@ struct LocalRepositoriesTests {
         firstEdit.note = "primeira edição"
         _ = try await repository.update(firstEdit)
 
-        var staleEdit = created // ainda na revisão 1
+        var staleEdit = created // still on revision 1
         staleEdit.note = "edição atrasada"
         await #expect(throws: StorageError.conflict) {
             try await repository.update(staleEdit)
@@ -55,7 +55,7 @@ struct LocalRepositoriesTests {
         #expect(try await repository.list().first?.note == "primeira edição")
     }
 
-    @Test("exclusão é lógica: o registro some da lista")
+    @Test("deletion is soft: the record leaves the list")
     func softDelete() async throws {
         let database = LocalDatabase(inMemory: .init())
         let repository = LocalMomentRepository(database: database)
@@ -68,7 +68,7 @@ struct LocalRepositoriesTests {
         #expect(stored.first?.deletedAt != nil)
     }
 
-    @Test("persiste em disco e recarrega")
+    @Test("persists to disk and reloads")
     func persistsToDisk() async throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("clara-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: url) }
@@ -82,7 +82,7 @@ struct LocalRepositoriesTests {
     }
 }
 
-/// Relógio controlável para testes (thread-safe porque é lido de dentro do actor).
+/// Controllable clock for tests (thread-safe because it is read from inside the actor).
 final class TestNow: Sendable {
     private let current: OSAllocatedUnfairLock<Date>
 

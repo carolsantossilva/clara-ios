@@ -5,9 +5,9 @@ import Foundation
 import Testing
 @testable import RecordsFeature
 
-/// Cada peça do VIP é testada isolada: o Interactor com um Presenter espião,
-/// o Presenter com uma View espiã. Nenhum teste precisa de UIKit na tela.
-@Suite("Registros — Interactor")
+/// Each VIP piece is tested in isolation: the Interactor with a spy Presenter,
+/// the Presenter with a spy View. No test needs UIKit on screen.
+@Suite("Records — Interactor")
 @MainActor
 struct RecordsInteractorTests {
     let presenter = PresenterSpy()
@@ -20,7 +20,7 @@ struct RecordsInteractorTests {
         return interactor
     }
 
-    @Test("rascunho vazio não é salvo")
+    @Test("an empty draft is not saved")
     func emptyDraftNeedsContent() async throws {
         let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()))
         let interactor = makeInteractor(repository: repository)
@@ -31,7 +31,7 @@ struct RecordsInteractorTests {
         #expect(try await repository.list().isEmpty)
     }
 
-    @Test("salvar cria o registro, recarrega a lista e registra evento")
+    @Test("saving creates the record, reloads the list and logs an event")
     func saveCreatesAndReloads() async {
         let interactor = makeInteractor(repository: LocalMomentRepository(database: LocalDatabase(inMemory: .init())))
 
@@ -42,7 +42,7 @@ struct RecordsInteractorTests {
         #expect(analytics.events.last?.properties == ["kind": "daily", "is_edit": "false"])
     }
 
-    @Test("editar atualiza o registro existente")
+    @Test("editing updates the existing record")
     func editUpdates() async throws {
         let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()))
         let interactor = makeInteractor(repository: repository)
@@ -57,7 +57,7 @@ struct RecordsInteractorTests {
         #expect(try await repository.list().map(\.note) == ["depois"])
     }
 
-    @Test("falha ao carregar apresenta erro amigável")
+    @Test("a load failure presents a friendly error")
     func loadFailure() async {
         let interactor = makeInteractor(repository: FailingMomentRepository())
 
@@ -68,10 +68,10 @@ struct RecordsInteractorTests {
     }
 }
 
-@Suite("Registros — Presenter")
+@Suite("Records — Presenter")
 @MainActor
 struct RecordsPresenterTests {
-    @Test("formata a linha com rótulos e sem campos vazios")
+    @Test("formats the row with labels and no empty fields")
     func formatsRow() {
         let moment = Fixtures.moment(
             kind: .daily,
@@ -90,13 +90,13 @@ struct RecordsPresenterTests {
         #expect(row.emptyNote == nil)
     }
 
-    @Test("registro só com a palavra mostra a nota acolhedora")
+    @Test("a word-only record shows the reassuring note")
     func moodOnly() {
         let row = RecordsPresenter.makeRow(Fixtures.moment(at: "2026-09-20T10:00:00-03:00", mood: .difficult))
         #expect(row.emptyNote == "Só a palavra escolhida — e tudo bem.")
     }
 
-    @Test("entrega o ViewModel para a View")
+    @Test("hands the ViewModel to the View")
     func forwardsToView() {
         let presenter = RecordsPresenter()
         let view = DisplaySpy()

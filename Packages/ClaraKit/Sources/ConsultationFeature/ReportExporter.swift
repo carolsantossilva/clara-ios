@@ -6,8 +6,8 @@ public protocol ReportExporting: Sendable {
     func exportPDF(html: String, fileName: String) throws -> URL
 }
 
-/// Converte o HTML do resumo em PDF A4 com o motor de impressão do UIKit.
-/// Precisa rodar no main actor: as classes de impressão do UIKit são de UI.
+/// Converts the summary HTML into an A4 PDF with UIKit's print engine.
+/// Must run on the main actor: UIKit's print classes are UI classes.
 public struct PrintRendererReportExporter: ReportExporting {
     public init() {}
 
@@ -31,8 +31,8 @@ public struct PrintRendererReportExporter: ReportExporting {
     }
 }
 
-/// `paperRect` e `printableRect` são somente leitura: a forma suportada de
-/// definir o tamanho da página é sobrescrevê-los numa subclasse.
+/// `paperRect` and `printableRect` are read-only: the supported way to set the
+/// page size is to override them in a subclass.
 private final class A4PageRenderer: UIPrintPageRenderer {
     override var paperRect: CGRect { CGRect(x: 0, y: 0, width: 595.2, height: 841.8) }
     override var printableRect: CGRect { paperRect.insetBy(dx: 48, dy: 54) }

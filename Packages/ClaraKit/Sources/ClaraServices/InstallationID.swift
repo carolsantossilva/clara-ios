@@ -1,11 +1,11 @@
 import ClaraLegacy
 import Foundation
 
-/// ID anônimo e estável da instalação, usado só para sortear o grupo do A/B.
+/// Anonymous, stable installation ID, used only to assign the A/B group.
 ///
-/// Fica no armazenamento legado em Objective-C. Repare que chamamos
-/// `loadValue(forKey:)` com `await`: o Swift gerou essa versão `async`
-/// automaticamente a partir do método com completion handler.
+/// It lives in the legacy Objective-C storage. Note that we call
+/// `loadValue(forKey:)` with `await`: Swift generated that `async` version
+/// automatically from the completion-handler method.
 public struct InstallationIDProvider: Sendable {
     private static let key = "installation-id"
     private let store: CLALegacyKeyValueStore

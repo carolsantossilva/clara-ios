@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
-"""Verificações de política para código gerado por IA (e por pessoas).
+"""Policy checks for AI-generated code (and code written by people).
 
-Roda no CI (job "policy") e localmente (hook de Stop do Claude Code).
+Runs in CI (the "policy" job) and locally (Claude Code Stop hook).
 
-Regras:
-  1. Dependências: toda dependência externa precisa estar em
-     guardrails/allowed-dependencies.txt, e pacotes Swift remotos precisam de
-     versão exata (`exact:` ou `revision:`). Sem exceção por label.
-  2. Guardrails: mudar um caminho de guardrails/protected-paths.txt exige o
-     label "guardrails-change".
-  3. Supressões: adicionar um padrão de guardrails/suppression-patterns.txt
-     exige o label "guardrail-exception".
-  4. Testes: diminuir o número de testes exige o label "guardrail-exception".
+Rules:
+  1. Dependencies: every external dependency must be in
+     guardrails/allowed-dependencies.txt, and remote Swift packages need an
+     exact version (`exact:` or `revision:`). No label exception.
+  2. Guardrails: changing a path from guardrails/protected-paths.txt requires
+     the "guardrails-change" label.
+  3. Suppressions: adding a pattern from guardrails/suppression-patterns.txt
+     requires the "guardrail-exception" label.
+  4. Tests: lowering the number of tests requires the "guardrail-exception" label.
 
-Uso:
-  policy_check.py --mode pr --base <sha>     # PR: regras 1 a 4
-  policy_check.py --mode push --base <sha>   # push na main: só a regra 1
-  policy_check.py --mode local               # árvore de trabalho contra origin/main (ou HEAD)
-  policy_check.py --mode staged              # só o que está no commit (hook de pre-commit)
+Usage:
+  policy_check.py --mode pr --base <sha>     # PR: rules 1 to 4
+  policy_check.py --mode push --base <sha>   # push to main: rule 1 only
+  policy_check.py --mode local               # working tree against origin/main (or HEAD)
+  policy_check.py --mode staged              # only what is staged (pre-commit hook)
 
-Labels do PR vêm da variável PR_LABELS (JSON com a lista de nomes).
+PR labels come from the PR_LABELS variable (a JSON list of names).
 """
 from __future__ import annotations
 
@@ -87,11 +87,11 @@ def read_list(path: str) -> list[str]:
 class Diff:
     changed: list[str]
     deleted: list[str]
-    added_lines: list[tuple[str, int, str]]  # (arquivo, linha, conteúdo)
+    added_lines: list[tuple[str, int, str]]  # (file, line, content)
 
 
 def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
-    # PR/push: base...HEAD. Local: base com a árvore de trabalho. Staged: base com o índice.
+    # PR/push: base...HEAD. Local: base against the working tree. Staged: base against the index.
     if staged:
         spec = ["--cached", base]
     elif local:
@@ -131,7 +131,7 @@ def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
     return Diff(changed=changed, deleted=deleted, added_lines=added)
 
 
-# ---------------------------------------------------------------- regra 1
+# ---------------------------------------------------------------- rule 1
 
 
 SWIFT_PACKAGE = re.compile(r"\.package\(\s*url:\s*\"([^\"]+)\"\s*,\s*(\w+)\s*:")
@@ -151,15 +151,15 @@ def check_dependencies(report: Report) -> None:
                 line = text.count("\n", 0, match.start()) + 1
                 if ("swift", url) not in allowed:
                     report.error(
-                        f"Dependência Swift fora da lista permitida: {url}. "
-                        "Confira se o pacote existe e é o correto, depois peça para uma pessoa "
-                        "adicioná-lo em guardrails/allowed-dependencies.txt.",
+                        f"Swift dependency not in the allow-list: {url}. "
+                        "Check that the package exists and is the right one, then ask a person "
+                        "to add it to guardrails/allowed-dependencies.txt.",
                         path, line,
                     )
                 if requirement not in ("exact", "revision"):
                     report.error(
-                        f"Use versão exata para {url} (`exact:`), não `{requirement}:`. "
-                        "Assim nenhuma versão nova entra sem passar por PR (o Dependabot abre os PRs).",
+                        f"Use an exact version for {url} (`exact:`), not `{requirement}:`. "
+                        "That way no new version gets in without a PR (Dependabot opens them).",
                         path, line,
                     )
         elif name == "Gemfile":
@@ -167,10 +167,10 @@ def check_dependencies(report: Report) -> None:
             for match in GEM.finditer(text):
                 if ("gem", match.group(1)) not in allowed:
                     line = text.count("\n", 0, match.start()) + 1
-                    report.error(f"Gem fora da lista permitida: {match.group(1)}.", path, line)
+                    report.error(f"Gem not in the allow-list: {match.group(1)}.", path, line)
 
 
-# ---------------------------------------------------------------- regra 2
+# ---------------------------------------------------------------- rule 2
 
 
 def is_protected(path: str, prefixes: list[str]) -> bool:
@@ -184,15 +184,15 @@ def check_protected(report: Report, diff: Diff, labels: set[str] | None) -> None
         return
     listing = ", ".join(touched)
     if labels is None:
-        report.notice(f"Arquivos de guardrail alterados (o PR vai precisar do label {LABEL_GUARDRAILS}): {listing}")
+        report.notice(f"Guardrail files changed (the PR will need the {LABEL_GUARDRAILS} label): {listing}")
     elif LABEL_GUARDRAILS not in labels:
         report.error(
-            f"Este PR altera arquivos de guardrail ({listing}). "
-            f"Uma pessoa precisa revisar e adicionar o label '{LABEL_GUARDRAILS}'."
+            f"This PR changes guardrail files ({listing}). "
+            f"A person needs to review it and add the '{LABEL_GUARDRAILS}' label."
         )
 
 
-# ---------------------------------------------------------------- regra 3
+# ---------------------------------------------------------------- rule 3
 
 
 def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> None:
@@ -206,8 +206,8 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
     for path, line_no, text in diff.added_lines:
         if not path.endswith((".swift", ".m", ".h")) or is_protected(path, prefixes):
             continue
-        # Comentário só conta se for uma diretiva (ex.: swiftlint:disable); citar
-        # `@unchecked Sendable` numa explicação não desliga nada.
+        # A comment only counts if it is a directive (e.g. swiftlint:disable); mentioning
+        # `@unchecked Sendable` in an explanation turns nothing off.
         stripped = text.strip()
         if stripped.startswith(("//", "/*", "*")) and not re.search(r"\b(swiftlint|swiftformat):", stripped):
             continue
@@ -216,27 +216,27 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
                 hits.append((path, line_no, why, text.strip()))
 
     for path, line_no, why, text in hits:
-        message = f"Supressão adicionada ({why}): {text}"
+        message = f"Suppression added ({why}): {text}"
         if labels is None:
             report.notice(message, path, line_no)
         elif LABEL_EXCEPTION not in labels:
             report.error(
-                f"{message}. Corrija o código em vez de desligar a verificação; se a exceção for "
-                f"mesmo necessária, justifique no PR e uma pessoa adiciona o label '{LABEL_EXCEPTION}'.",
+                f"{message}. Fix the code instead of turning the check off; if the exception is "
+                f"really needed, justify it in the PR and a person adds the '{LABEL_EXCEPTION}' label.",
                 path, line_no,
             )
         else:
-            report.notice(f"{message} (aceita pelo label {LABEL_EXCEPTION})", path, line_no)
+            report.notice(f"{message} (accepted by the {LABEL_EXCEPTION} label)", path, line_no)
 
 
-# ---------------------------------------------------------------- regra 4
+# ---------------------------------------------------------------- rule 4
 
 
 TEST_DECL = re.compile(r"^\s*(@Test\b|func\s+test\w*\s*\()", re.MULTILINE)
 
 
 def count_tests(tree: str | None) -> int:
-    """Conta testes em um commit (tree) ou na árvore de trabalho (None)."""
+    """Counts tests in a commit (tree) or in the working tree (None)."""
     total = 0
     if tree is None:
         files = git("ls-files", "--cached", "--others", "--exclude-standard").splitlines()
@@ -257,11 +257,11 @@ def check_test_count(report: Report, base: str, local: bool, labels: set[str] | 
     before, after = count_tests(merge_base), count_tests(None if local else "HEAD")
     if after >= before:
         return
-    message = f"O número de testes caiu de {before} para {after}."
+    message = f"The number of tests went down from {before} to {after}."
     if labels is None:
         report.notice(message)
     elif LABEL_EXCEPTION not in labels:
-        report.error(f"{message} Remover testes exige revisão humana e o label '{LABEL_EXCEPTION}'.")
+        report.error(f"{message} Removing tests requires human review and the '{LABEL_EXCEPTION}' label.")
 
 
 # ---------------------------------------------------------------- main
@@ -297,13 +297,13 @@ def main() -> int:
             check_test_count(report, base, local, labels)
 
     for message in report.notices:
-        print(f"aviso: {message}", file=sys.stderr)
+        print(f"warning: {message}", file=sys.stderr)
     for message in report.errors:
-        print(f"erro: {message}", file=sys.stderr)
+        print(f"error: {message}", file=sys.stderr)
     if report.errors:
-        print(f"\n{len(report.errors)} violação(ões) de política.", file=sys.stderr)
+        print(f"\n{len(report.errors)} policy violation(s).", file=sys.stderr)
         return 1
-    print("Políticas OK.", file=sys.stderr)
+    print("Policies OK.", file=sys.stderr)
     return 0
 
 

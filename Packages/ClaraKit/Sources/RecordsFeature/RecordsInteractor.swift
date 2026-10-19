@@ -2,7 +2,7 @@ import ClaraCore
 import ClaraServices
 import Foundation
 
-/// O que a View pode pedir ao Interactor.
+/// What the View can ask the Interactor for.
 @MainActor
 protocol RecordsBusinessLogic: AnyObject {
     func load() async
@@ -10,14 +10,14 @@ protocol RecordsBusinessLogic: AnyObject {
     func delete(id: UUID) async
 }
 
-/// Dados que o Router lê para montar a próxima tela (ex.: o momento a editar).
+/// Data the Router reads to build the next screen (e.g. the moment to edit).
 @MainActor
 protocol RecordsDataStore: AnyObject {
     var moments: [Moment] { get }
 }
 
-/// Regras de negócio da tela. Não conhece UIKit nem formatação de texto:
-/// recebe pedidos, fala com o repositório e entrega dados crus ao Presenter.
+/// The screen's business rules. It knows neither UIKit nor text formatting:
+/// it receives requests, talks to the repository and hands raw data to the Presenter.
 @MainActor
 final class RecordsInteractor: RecordsBusinessLogic, RecordsDataStore {
     var presenter: (any RecordsPresentationLogic)?
@@ -64,7 +64,7 @@ final class RecordsInteractor: RecordsBusinessLogic, RecordsDataStore {
             await load()
             return .saved
         } catch StorageError.conflict {
-            // Alguém (outra tela, futuro sync) mudou o registro: recarrega em vez de sobrescrever.
+            // Someone (another screen, a future sync) changed the record: reload instead of overwriting.
             await load()
             presenter?.presentFailure(title: "Este registro mudou", message: "Abrimos a versão mais recente. Confira e edite de novo, se quiser.")
             return .failed

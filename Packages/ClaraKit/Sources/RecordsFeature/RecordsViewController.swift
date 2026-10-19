@@ -7,21 +7,21 @@ protocol RecordsDisplayLogic: AnyObject {
     func displayFailure(_ viewModel: Records.Failure.ViewModel)
 }
 
-/// Tela de Registros em UIKit + View Code (sem storyboard).
+/// The Records screen in UIKit + View Code (no storyboard).
 ///
-/// Ciclo de vida relevante aqui:
-/// - `loadView`: cria a hierarquia de views (no lugar do storyboard).
-/// - `viewDidLoad`: configuração única + primeira carga.
-/// - `viewDidLayoutSubviews`: os tamanhos finais já existem; recalculamos a
-///   altura do cabeçalho da tabela, que o UITableView não dimensiona sozinho.
+/// Lifecycle that matters here:
+/// - `loadView`: creates the view hierarchy (instead of a storyboard).
+/// - `viewDidLoad`: one-time setup + first load.
+/// - `viewDidLayoutSubviews`: final sizes exist; we recompute the table header
+///   height, which UITableView does not size on its own.
 final class RecordsViewController: UIViewController, RecordsDisplayLogic {
     var interactor: (any RecordsBusinessLogic)?
     var router: (any RecordsRoutingLogic)?
 
     private enum Section { case timeline }
 
-    /// Itens identificados por ID, não pela linha inteira: quando um registro é
-    /// editado, a célula é *reconfigurada* em vez de removida e inserida de novo.
+    /// Items identified by ID, not by the whole row: when a record is edited,
+    /// the cell is *reconfigured* instead of removed and inserted again.
     private enum Item: Hashable {
         case moment(UUID)
         case empty
@@ -50,8 +50,8 @@ final class RecordsViewController: UIViewController, RecordsDisplayLogic {
         configureTable()
         headerView.onCheckIn = { [weak self] in self?.router?.routeToNewMoment(kind: .daily) }
         headerView.onNewMoment = { [weak self] in self?.router?.routeToNewMoment(kind: .event) }
-        // A Task herda o MainActor da view controller. `[weak self]` evita que a
-        // carga mantenha a tela viva se ela for fechada antes de terminar.
+        // The Task inherits the view controller's MainActor. `[weak self]` keeps the
+        // load from holding the screen alive if it is closed before finishing.
         Task { [weak self] in await self?.interactor?.load() }
     }
 
@@ -81,7 +81,7 @@ final class RecordsViewController: UIViewController, RecordsDisplayLogic {
         )
         guard headerView.frame.height != fitting.height || headerView.frame.width != width else { return }
         headerView.frame.size = CGSize(width: width, height: fitting.height)
-        // Reatribuir é o jeito de avisar a tabela que o cabeçalho mudou de altura.
+        // Reassigning is how you tell the table that the header changed height.
         tableView.tableHeaderView = headerView
     }
 
@@ -127,7 +127,7 @@ final class RecordsViewController: UIViewController, RecordsDisplayLogic {
                 .map { Item.moment($0.id) }
             snapshot.reconfigureItems(changed)
         }
-        // Respeita "Reduzir movimento" e não anima antes da tela estar visível.
+        // Honors "Reduce Motion" and does not animate before the screen is visible.
         let animate = view.window != nil && !UIAccessibility.isReduceMotionEnabled
         dataSource.apply(snapshot, animatingDifferences: animate)
     }

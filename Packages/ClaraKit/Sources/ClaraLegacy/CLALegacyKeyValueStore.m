@@ -32,7 +32,7 @@
 - (void)loadValueForKey:(NSString *)key completion:(void (^)(NSString *_Nullable))completion {
     dispatch_async(self.queue, ^{
         NSString *value = [self.defaults stringForKey:key];
-        // Regra de ouro ao virar `async` no Swift: o completion é chamado exatamente uma vez.
+        // Golden rule when bridged to `async` in Swift: the completion is called exactly once.
         completion(value);
     });
 }

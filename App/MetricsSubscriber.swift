@@ -2,9 +2,9 @@ import ClaraServices
 import Foundation
 import MetricKit
 
-/// MetricKit entrega, em até 24h, métricas reais do app em produção (tempo de
-/// abertura, travamentos, uso de memória) e diagnósticos de crash/hang — sem SDK
-/// de terceiros. Complementa o Instruments, que mede só na máquina de quem testa.
+/// MetricKit delivers, within 24 hours, real metrics of the app in production (launch
+/// time, hangs, memory use) and crash/hang diagnostics, with no third-party SDK.
+/// It complements Instruments, which only measures on the tester's machine.
 final class MetricsSubscriber: NSObject, MXMetricManagerSubscriber {
     private let crashReporter: any CrashReporter
 

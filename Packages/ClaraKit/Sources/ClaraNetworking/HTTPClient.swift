@@ -5,10 +5,10 @@ public enum HTTPMethod: String, Sendable {
     case post = "POST"
 }
 
-/// Descreve uma chamada REST e o tipo que ela devolve.
+/// Describes a REST call and the type it returns.
 ///
-/// O `associatedtype Response` liga a requisição à resposta em tempo de compilação:
-/// `client.send(HolidaysEndpoint(year: 2026))` já devolve `[Holiday]`, sem cast.
+/// The `associatedtype Response` ties the request to the response at compile time:
+/// `client.send(HolidaysEndpoint(year: 2026))` returns `[Holiday]` directly, no cast.
 public protocol Endpoint: Sendable {
     associatedtype Response: Decodable & Sendable
 
@@ -36,7 +36,7 @@ public enum APIError: Error, Equatable {
     case status(Int)
     case decoding(String)
 
-    /// Só vale tentar de novo quando o problema pode ser passageiro.
+    /// Retrying only makes sense when the problem may be transient.
     var isRetryable: Bool {
         switch self {
         case .transport(let code):
@@ -64,7 +64,7 @@ public struct RetryPolicy: Sendable {
 
     public static let none = RetryPolicy(maxAttempts: 1, baseDelay: .zero)
 
-    /// Backoff exponencial: 300ms, 600ms, 1.2s...
+    /// Exponential backoff: 300ms, 600ms, 1.2s...
     func delay(afterAttempt attempt: Int) -> Duration {
         baseDelay * (1 << (attempt - 1))
     }
@@ -88,7 +88,7 @@ public struct URLSessionHTTPClient: HTTPClient {
             do {
                 return try await perform(request, decoding: E.Response.self)
             } catch let error as APIError where error.isRetryable && attempt < retryPolicy.maxAttempts {
-                // Task.sleep respeita cancelamento: se a tela sumir, o retry para.
+                // Task.sleep honors cancellation: if the screen goes away, the retry stops.
                 try await Task.sleep(for: retryPolicy.delay(afterAttempt: attempt))
                 attempt += 1
             }

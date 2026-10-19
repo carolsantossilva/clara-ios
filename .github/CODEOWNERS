@@ -1,5 +1,5 @@
-# Dona de todo o repositório. Os caminhos de guardrail estão listados à parte
-# para deixar explícito que qualquer mudança neles passa por ela.
+# Owner of the whole repository. Guardrail paths are listed separately to make
+# it explicit that any change to them goes through her.
 *                         @carolsantossilva
 
 /.github/                 @carolsantossilva

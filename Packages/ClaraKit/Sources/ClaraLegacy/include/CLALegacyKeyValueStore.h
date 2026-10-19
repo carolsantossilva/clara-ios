@@ -2,16 +2,16 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
-/// Armazenamento "legado" com API de completion handler executada numa fila GCD.
+/// "Legacy" storage with a completion-handler API that runs on a GCD queue.
 ///
-/// O Swift importa estes métodos automaticamente como `async`:
+/// Swift automatically imports these methods as `async`:
 ///   - `loadValue(forKey:) async -> String?`
 ///   - `saveValue(_:forKey:) async`
-/// O completion roda numa fila de background; o `await` no Swift retoma no
-/// executor de quem chamou (por exemplo, o MainActor).
+/// The completion runs on a background queue; the `await` in Swift resumes on the
+/// caller's executor (for example, the MainActor).
 ///
-/// NS_SWIFT_SENDABLE: a classe é thread-safe (todo acesso passa pela fila serial),
-/// então pode atravessar fronteiras de concorrência no Swift.
+/// NS_SWIFT_SENDABLE: the class is thread-safe (every access goes through the serial queue),
+/// so it can cross concurrency boundaries in Swift.
 NS_SWIFT_SENDABLE
 @interface CLALegacyKeyValueStore : NSObject
 

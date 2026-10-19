@@ -2,9 +2,9 @@ import ClaraDesignSystem
 import ClaraServices
 import SwiftUI
 
-/// Privacidade (para a usuária) e diagnóstico (para a demo e para o time).
-/// Mostra ao vivo: consentimento de analytics, origem do remote config, flags,
-/// variante do A/B, disponibilidade da IA e os últimos eventos enviados.
+/// Privacy (for the user) and diagnostics (for the demo and the team).
+/// Shows live: analytics consent, remote config source, flags,
+/// A/B variant, AI availability and the latest events sent.
 struct PrivacyView: View {
     let environment: AppEnvironment
 

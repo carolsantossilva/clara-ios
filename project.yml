@@ -1,6 +1,6 @@
-# Projeto gerado com XcodeGen: `xcodegen generate` cria o Clara.xcodeproj.
-# O .xcodeproj não vai para o git — sem conflitos de merge em project.pbxproj,
-# um problema clássico em times grandes.
+# Project generated with XcodeGen: `xcodegen generate` creates Clara.xcodeproj.
+# The .xcodeproj stays out of git, so there are no merge conflicts in project.pbxproj,
+# a classic problem in large teams.
 name: Clara
 options:
   bundleIdPrefix: app.clara
@@ -15,7 +15,7 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
-    # Necessário para o script do SwiftLint ler os arquivos do projeto.
+    # Needed for the SwiftLint script to read the project files.
     ENABLE_USER_SCRIPT_SANDBOXING: NO
     REMOTE_CONFIG_URL: https://raw.githubusercontent.com/carolsantossilva/clara-ios/main/config/remote-config.json
 
@@ -70,7 +70,7 @@ targets:
           if command -v swiftlint >/dev/null 2>&1; then
             swiftlint lint --quiet
           else
-            echo "warning: SwiftLint não instalado (brew install swiftlint)"
+            echo "warning: SwiftLint is not installed (brew install swiftlint)"
           fi
 
   ClaraUITests:

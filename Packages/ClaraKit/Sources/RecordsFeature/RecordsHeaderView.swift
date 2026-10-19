@@ -1,7 +1,7 @@
 import ClaraDesignSystem
 import UIKit
 
-/// Cabeçalho da tela: título e os dois atalhos (check-in e momento avulso).
+/// Screen header: title and the two shortcuts (check-in and one-off moment).
 final class RecordsHeaderView: UIView {
     var onCheckIn: (() -> Void)?
     var onNewMoment: (() -> Void)?
@@ -77,8 +77,8 @@ final class RecordsHeaderView: UIView {
 
         addSubview(stack)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        // Prioridade 999 no fundo: antes do primeiro cálculo de tamanho o frame é
-        // zero, e uma restrição obrigatória geraria avisos de conflito no console.
+        // Priority 999 at the bottom: before the first size pass the frame is zero,
+        // and a required constraint would log conflict warnings to the console.
         let bottom = stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12)
         bottom.priority = .init(999)
         NSLayoutConstraint.activate([
@@ -89,7 +89,7 @@ final class RecordsHeaderView: UIView {
         ])
     }
 
-    /// Texto e ícone de um botão de ação do cabeçalho.
+    /// Text and icon of a header action button.
     private struct ActionContent {
         let title: String
         let subtitle: String

@@ -1,5 +1,5 @@
 appId: app.clara.ios
-name: Consulta mostra a prévia do resumo
+name: Consultation shows the summary preview
 ---
 - launchApp:
     clearState: true

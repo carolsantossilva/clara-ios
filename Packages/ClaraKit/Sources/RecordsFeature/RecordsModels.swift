@@ -1,7 +1,7 @@
 import ClaraCore
 import Foundation
 
-/// Modelos do ciclo VIP (Clean Swift), agrupados por caso de uso:
+/// VIP cycle (Clean Swift) models, grouped by use case:
 /// View → Interactor (Request) → Presenter (Response) → View (ViewModel).
 enum Records {
     enum Load {
@@ -14,7 +14,7 @@ enum Records {
         }
     }
 
-    /// Uma linha da lista, já formatada. A View só atribui textos: nenhuma regra mora nela.
+    /// A list row, already formatted. The View only assigns text: no rules live in it.
     struct Row: Hashable {
         let id: UUID
         let symbol: String

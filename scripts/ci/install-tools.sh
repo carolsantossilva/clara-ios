@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Instala ferramentas do CI com versão fixa e checksum conferido.
-# Uso: scripts/ci/install-tools.sh xcodegen swiftlint gitleaks maestro
-# Atualizar uma versão = mudar versão e checksum juntos, num PR com label guardrails-change.
+# Installs CI tools at a pinned version with a verified checksum.
+# Usage: scripts/ci/install-tools.sh xcodegen swiftlint gitleaks maestro
+# Updating a version = changing version and checksum together, in a PR with the guardrails-change label.
 set -euo pipefail
 
 BIN="${RUNNER_TEMP:-/tmp}/tools/bin"
@@ -10,7 +10,7 @@ WORK="$(mktemp -d)"
 os="$(uname -s)"
 EXTRA_PATHS=()
 
-fetch() { # url sha256 arquivo
+fetch() { # url sha256 file
   curl -fsSL --retry 3 -o "$WORK/$3" "$1"
   echo "$2  $WORK/$3" | shasum -a 256 -c - >/dev/null
   echo "✓ checksum ok: $3"
@@ -22,8 +22,8 @@ for tool in "$@"; do
       fetch https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip \
         4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806 xcodegen.zip
       unzip -q "$WORK/xcodegen.zip" -d "$WORK/xcodegen-dist"
-      # Sem link simbólico: o XcodeGen acha os presets (share/) a partir do caminho
-      # do executável; por um link, gera targets sem PRODUCT_NAME.
+      # No symlink: XcodeGen finds its presets (share/) from the executable's path;
+      # through a link, it generates targets without PRODUCT_NAME.
       mv "$WORK/xcodegen-dist/xcodegen" "${RUNNER_TEMP:-/tmp}/tools/xcodegen"
       EXTRA_PATHS+=("${RUNNER_TEMP:-/tmp}/tools/xcodegen/bin") ;;
     swiftlint:Darwin)
@@ -39,13 +39,13 @@ for tool in "$@"; do
         29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991 maestro.zip
       unzip -q "$WORK/maestro.zip" -d "${RUNNER_TEMP:-/tmp}/tools"
       EXTRA_PATHS+=("${RUNNER_TEMP:-/tmp}/tools/maestro/bin") ;;
-    *) echo "Ferramenta sem versão fixada para $os: $tool" >&2; exit 1 ;;
+    *) echo "No pinned version of $tool for $os" >&2; exit 1 ;;
   esac
 done
 
 if [[ -n "${GITHUB_PATH:-}" ]]; then
   echo "$BIN" >> "$GITHUB_PATH"
-  # Forma compatível com o bash 3.2 do macOS, que trata array vazio como não definido.
+  # Form compatible with macOS bash 3.2, which treats an empty array as unset.
   for dir in ${EXTRA_PATHS[@]+"${EXTRA_PATHS[@]}"}; do echo "$dir" >> "$GITHUB_PATH"; done
 fi
-echo "Ferramentas em $BIN"
+echo "Tools in $BIN"

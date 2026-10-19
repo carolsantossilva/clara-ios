@@ -7,10 +7,10 @@ import Foundation
 import Testing
 @testable import TodayFeature
 
-/// Testes do ViewModel sem SwiftUI: o router é um espião e o banco é real, em memória.
-/// Usar o repositório real (em memória) em vez de um mock deixa o teste menos frágil:
-/// ele verifica comportamento, não a sequência exata de chamadas internas.
-@Suite("Tela Hoje")
+/// ViewModel tests without SwiftUI: the router is a spy and the database is real, in memory.
+/// Using the real (in-memory) repository instead of a mock makes the test less brittle:
+/// it checks behavior, not the exact sequence of internal calls.
+@Suite("Today screen")
 @MainActor
 struct TodayViewModelTests {
     let database = LocalDatabase(inMemory: .init())
@@ -39,7 +39,7 @@ struct TodayViewModelTests {
         return viewModel
     }
 
-    @Test("sem foco escolhido, a tarefa mais recente vira o foco")
+    @Test("with no focus chosen, the newest task becomes the focus")
     func defaultsFocusToMostRecent() async {
         let viewModel = makeViewModel()
         await viewModel.createTask(title: "Antiga", nextAction: "")
@@ -49,7 +49,7 @@ struct TodayViewModelTests {
         #expect(viewModel.otherTasks.map(\.title) == ["Antiga"])
     }
 
-    @Test("criar tarefa fecha a sheet e registra o evento sem o texto da tarefa")
+    @Test("creating a task closes the sheet and logs the event without the task text")
     func createTaskDismissesAndTracks() async {
         let viewModel = makeViewModel()
 
@@ -60,7 +60,7 @@ struct TodayViewModelTests {
         #expect(analytics.events == [AnalyticsEvent(name: "task_created", properties: ["has_first_step": "true"])])
     }
 
-    @Test("título vazio não cria tarefa")
+    @Test("an empty title creates no task")
     func ignoresEmptyTitle() async {
         let viewModel = makeViewModel()
         let saved = await viewModel.createTask(title: "   ", nextAction: "")
@@ -68,7 +68,7 @@ struct TodayViewModelTests {
         #expect(viewModel.tasks.isEmpty)
     }
 
-    @Test("a duração do foco vem da variante do teste A/B")
+    @Test("the focus duration comes from the A/B variant")
     func focusDurationFromExperiment() async {
         let flags = FeatureFlags(config: RemoteConfig(flags: [:], experiments: ["focus_duration": ["25"]]))
         let viewModel = makeViewModel(flags: flags)
@@ -81,7 +81,7 @@ struct TodayViewModelTests {
         viewModel.timer.stop()
     }
 
-    @Test("pausar sem novo passo mantém o passo anterior")
+    @Test("pausing without a new step keeps the previous step")
     func pauseKeepsPreviousStep() async {
         let viewModel = makeViewModel()
         await viewModel.createTask(title: "Exames", nextAction: "abrir a pasta")
@@ -92,7 +92,7 @@ struct TodayViewModelTests {
         #expect(viewModel.focus?.nextAction == "abrir a pasta")
     }
 
-    @Test("aceitar um passo sugerido vira o próximo passo da tarefa")
+    @Test("accepting a suggested step makes it the task's next step")
     func acceptSuggestedStep() async throws {
         let viewModel = makeViewModel()
         await viewModel.createTask(title: "Exames", nextAction: "")
@@ -104,7 +104,7 @@ struct TodayViewModelTests {
         #expect(analytics.names.contains("step_suggestion_accepted"))
     }
 
-    @Test("falha ao carregar mostra alerta e registra no crash reporter")
+    @Test("a load failure shows an alert and reports to the crash reporter")
     func loadFailureShowsAlert() async {
         let viewModel = makeViewModel(tasks: FailingTaskRepository())
 
@@ -115,7 +115,7 @@ struct TodayViewModelTests {
         #expect(!viewModel.isLoading)
     }
 
-    @Test("feriado só aparece com a flag ligada")
+    @Test("the holiday only shows with the flag on")
     func holidayBehindFlag() async {
         let holiday = Holiday(date: "2026-10-12", name: "Nossa Senhora Aparecida")
         let flags = FeatureFlags(config: RemoteConfig(flags: ["holiday_banner": false], experiments: [:]))
@@ -129,7 +129,7 @@ struct TodayViewModelTests {
         #expect(viewModel.upcomingHoliday == holiday)
     }
 
-    @Test("guardar para depois limpa o campo e lista a anotação")
+    @Test("parking for later clears the field and lists the note")
     func parkingNote() async {
         let viewModel = makeViewModel()
         viewModel.parkingText = "  comprar pilhas  "
@@ -141,10 +141,10 @@ struct TodayViewModelTests {
     }
 }
 
-@Suite("Timer de foco")
+@Suite("Focus timer")
 @MainActor
 struct FocusTimerTests {
-    @Test("conta até zero e marca como terminado")
+    @Test("counts down to zero and marks as finished")
     func countsDown() async {
         let timer = FocusTimer(durationSeconds: 0, clock: ImmediateClock())
 
@@ -156,7 +156,7 @@ struct FocusTimerTests {
         #expect(!timer.isRunning)
     }
 
-    @Test("rótulos vêm do formatador Objective-C")
+    @Test("labels come from the Objective-C formatter")
     func labels() {
         let timer = FocusTimer(durationSeconds: 14 * 60 + 5, clock: ImmediateClock())
         #expect(timer.clockLabel == "14:05")

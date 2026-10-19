@@ -7,9 +7,9 @@ import Testing
 import UIKit
 @testable import RecordsFeature
 
-/// O Router com um ViewController espião: ele guarda o que seria apresentado em vez
-/// de mostrar na tela, então nenhum teste precisa de janela.
-@Suite("Registros — Router")
+/// The router with a spy view controller: it keeps what would be presented instead
+/// of showing it, so no test needs a window.
+@Suite("Records — Router")
 @MainActor
 struct RecordsRouterTests {
     let viewController = PresentingSpy()
@@ -29,7 +29,7 @@ struct RecordsRouterTests {
         return host.rootView
     }
 
-    @Test("novo registro abre o formulário em modo de criação, sem datas no futuro")
+    @Test("a new record opens the form in create mode, with no future dates")
     func newMomentOpensForm() throws {
         makeRouter().routeToNewMoment(kind: .daily)
 
@@ -38,7 +38,7 @@ struct RecordsRouterTests {
         #expect(form.maximumDate == now)
     }
 
-    @Test("editar abre o formulário em modo de edição")
+    @Test("editing opens the form in edit mode")
     func editOpensForm() throws {
         let moment = Fixtures.moment(at: "2026-10-09T09:00:00-03:00", note: "antes")
         interactor.moments = [moment]
@@ -48,17 +48,17 @@ struct RecordsRouterTests {
         #expect(try presentedForm().isEditing)
     }
 
-    @Test("editar um registro que não existe mais não abre nada")
+    @Test("editing a record that no longer exists opens nothing")
     func editMissingMomentDoesNothing() {
         makeRouter().routeToEdit(momentID: UUID())
 
         #expect(viewController.presented == nil)
     }
 
-    @Test("salvar no formulário fecha a tela só quando deu certo")
+    @Test("saving the form dismisses it only on success")
     func saveDismissesOnlyOnSuccess() async throws {
-        // O formulário guarda o Router com referência fraca; na tela, quem o mantém
-        // vivo é o ViewController. Aqui o teste segura a referência.
+        // The form holds the router weakly; on screen, the view controller keeps it
+        // alive. Here the test holds the reference.
         let router = makeRouter()
         router.routeToNewMoment(kind: .daily)
         let form = try presentedForm()
@@ -75,7 +75,7 @@ struct RecordsRouterTests {
         withExtendedLifetime(router) {}
     }
 
-    @Test("excluir pede confirmação com a opção de manter")
+    @Test("deleting asks for confirmation with an option to keep")
     func deleteAsksForConfirmation() throws {
         makeRouter().routeToDeleteConfirmation(momentID: UUID())
 
@@ -86,10 +86,10 @@ struct RecordsRouterTests {
     }
 }
 
-@Suite("Registros — Builder")
+@Suite("Records — Builder")
 @MainActor
 struct RecordsBuilderTests {
-    @Test("liga as peças do VIP nos dois sentidos")
+    @Test("wires the VIP pieces in both directions")
     func wiresTheCycle() throws {
         let dependencies = RecordsDependencies(
             repository: LocalMomentRepository(database: LocalDatabase(inMemory: .init())),

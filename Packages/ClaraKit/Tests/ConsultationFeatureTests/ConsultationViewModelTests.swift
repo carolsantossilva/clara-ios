@@ -6,7 +6,7 @@ import Foundation
 import Testing
 @testable import ConsultationFeature
 
-@Suite("Consulta")
+@Suite("Consultation")
 @MainActor
 struct ConsultationViewModelTests {
     let exporter = SpyExporter()
@@ -23,7 +23,7 @@ struct ConsultationViewModelTests {
         ))
     }
 
-    @Test("começa com a última semana e tudo selecionado")
+    @Test("starts with the last week and everything selected")
     func initialState() async {
         let inside = Fixtures.moment(at: "2026-09-18T10:00:00-03:00")
         let outside = Fixtures.moment(at: "2026-09-01T10:00:00-03:00")
@@ -35,7 +35,7 @@ struct ConsultationViewModelTests {
         #expect(viewModel.selectedIDs == [inside.id, outside.id])
     }
 
-    @Test("desmarcar remove do resumo")
+    @Test("unchecking removes from the summary")
     func toggleRemovesFromReport() async {
         let first = Fixtures.moment(at: "2026-09-18T10:00:00-03:00")
         let second = Fixtures.moment(at: "2026-09-19T10:00:00-03:00")
@@ -47,7 +47,7 @@ struct ConsultationViewModelTests {
         #expect(viewModel.report.entries.map(\.id) == [second.id])
     }
 
-    @Test("\"Este mês\" começa no dia 1")
+    @Test("\"Este mês\" (this month) starts on day 1")
     func thisMonth() async {
         let early = Fixtures.moment(at: "2026-09-02T10:00:00-03:00")
         let viewModel = makeViewModel(moments: [early])
@@ -59,7 +59,7 @@ struct ConsultationViewModelTests {
         #expect(viewModel.eligible.map(\.id) == [early.id])
     }
 
-    @Test("exportar gera o HTML com as perguntas e registra só a contagem")
+    @Test("export builds the HTML with the questions and only logs the count")
     func exportsPDF() async {
         let viewModel = makeViewModel(moments: [Fixtures.moment(at: "2026-09-19T10:00:00-03:00", note: "dia cheio")])
         await viewModel.load()

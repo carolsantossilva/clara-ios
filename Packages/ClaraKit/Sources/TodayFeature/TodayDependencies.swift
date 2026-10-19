@@ -3,8 +3,8 @@ import ClaraCore
 import ClaraServices
 import Foundation
 
-/// Tudo o que a feature precisa do mundo de fora, num só lugar.
-/// O app monta com implementações reais; os testes, com dublês.
+/// Everything the feature needs from the outside world, in one place.
+/// The app wires real implementations; the tests wire doubles.
 public struct TodayDependencies: Sendable {
     public var tasks: any TaskRepository
     public var parking: any ParkingRepository
@@ -13,8 +13,8 @@ public struct TodayDependencies: Sendable {
     public var flags: FeatureFlags
     public var analytics: any AnalyticsTracker
     public var crashReporter: any CrashReporter
-    /// `any Clock<Duration>`: em produção `ContinuousClock`; nos testes um relógio
-    /// que não espera de verdade, para o timer não deixar o teste lento nem instável.
+    /// `any Clock<Duration>`: `ContinuousClock` in production; in tests a clock that
+    /// does not really wait, so the timer does not make the test slow or flaky.
     public var clock: any Clock<Duration>
     public var now: @Sendable () -> Date
 

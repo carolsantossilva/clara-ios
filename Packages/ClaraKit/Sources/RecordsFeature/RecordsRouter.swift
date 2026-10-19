@@ -9,8 +9,8 @@ protocol RecordsRoutingLogic: AnyObject {
     func routeToDeleteConfirmation(momentID: UUID)
 }
 
-/// Navegação da feature. Aqui o UIKit apresenta uma tela SwiftUI
-/// (`UIHostingController`): interoperabilidade nos dois sentidos no mesmo app.
+/// The feature's navigation. Here UIKit presents a SwiftUI screen
+/// (`UIHostingController`): interoperability both ways in the same app.
 @MainActor
 final class RecordsRouter: RecordsRoutingLogic {
     weak var viewController: UIViewController?

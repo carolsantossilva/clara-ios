@@ -15,7 +15,7 @@ public struct RecordsDependencies: Sendable {
     }
 }
 
-/// Monta o ciclo VIP e liga as referências (fortes num sentido, fracas no outro):
+/// Builds the VIP cycle and wires the references (strong one way, weak the other):
 ///
 ///     ViewController ──▶ Interactor ──▶ Presenter ┄┄▶ ViewController (weak)
 ///           │
@@ -43,7 +43,7 @@ public enum RecordsBuilder {
     }
 }
 
-/// Ponte para usar a tela UIKit dentro da navegação SwiftUI (TabView do app).
+/// Bridge to use the UIKit screen inside SwiftUI navigation (the app's TabView).
 public struct RecordsScreen: UIViewControllerRepresentable {
     private let dependencies: RecordsDependencies
 

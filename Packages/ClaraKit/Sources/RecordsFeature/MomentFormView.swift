@@ -2,7 +2,7 @@ import ClaraCore
 import ClaraDesignSystem
 import SwiftUI
 
-/// Formulário de check-in/momento em SwiftUI, apresentado pelo Router UIKit.
+/// Check-in/moment form in SwiftUI, presented by the UIKit Router.
 struct MomentFormView: View {
     @State var draft: MomentDraft
     let isEditing: Bool

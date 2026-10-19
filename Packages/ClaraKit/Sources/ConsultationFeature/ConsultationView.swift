@@ -26,7 +26,7 @@ public struct ConsultationView: View {
             .padding(.bottom, ClaraSpacing.extraLarge)
         }
         .background(ClaraColor.background.ignoresSafeArea())
-        // Recarrega sempre que a aba aparece: registros podem ter mudado na outra aba.
+        // Reloads whenever the tab appears: records may have changed in the other tab.
         .task { await viewModel.load() }
         .claraAlert($viewModel.alert)
     }
@@ -46,7 +46,7 @@ public struct ConsultationView: View {
 
             SectionHeader(eyebrow: "2 · Selecione com calma", title: "O que quer incluir?") {
                 Button(action: viewModel.selectAllEligible) {
-                    // Área de toque mínima de 44 pt, mesmo sendo só texto.
+                    // Minimum 44 pt hit area, even though it is only text.
                     Text("Selecionar tudo")
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())
@@ -114,7 +114,7 @@ private struct SelectableMomentRow: View {
     }
 }
 
-/// Prévia fiel do que vai para o PDF: mesmas palavras, mesma ordem.
+/// A faithful preview of what goes into the PDF: same words, same order.
 private struct ReportPreview: View {
     let viewModel: ConsultationViewModel
 

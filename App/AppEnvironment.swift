@@ -9,9 +9,9 @@ import RecordsFeature
 import SwiftUI
 import TodayFeature
 
-/// Composition root: o único lugar que conhece as implementações concretas.
-/// As features recebem só protocolos — trocar o banco, o analytics ou a IA
-/// muda este arquivo e nenhum outro.
+/// Composition root: the only place that knows the concrete implementations.
+/// Features receive only protocols; swapping the database, analytics or AI
+/// changes this file and no other.
 @MainActor
 final class AppEnvironment {
     let flags: FeatureFlags
@@ -53,14 +53,14 @@ final class AppEnvironment {
             destinations: [
                 AnyAnalyticsDestination(ConsoleAnalyticsDestination(), name: "Console"),
                 AnyAnalyticsDestination(BufferAnalyticsDestination(buffer: buffer), name: "Painel local"),
-                // Em produção: AnyAnalyticsDestination(FirebaseDestination(), name: "Firebase")
+                // In production: AnyAnalyticsDestination(FirebaseDestination(), name: "Firebase")
             ],
             hasConsent: isUITesting || UserDefaults.standard.bool(forKey: Self.consentKey)
         )
     }
 
     static func make(arguments: [String] = ProcessInfo.processInfo.arguments) -> AppEnvironment {
-        // UI tests rodam com banco em memória e sem rede: resultados determinísticos.
+        // UI tests run with an in-memory database and no network: deterministic results.
         if arguments.contains("-ui-testing") {
             return AppEnvironment(
                 database: LocalDatabase(inMemory: .init()),
@@ -76,7 +76,7 @@ final class AppEnvironment {
         do {
             database = try LocalDatabase(fileURL: LocalDatabase.defaultFileURL())
         } catch {
-            // Não perder a sessão por causa do disco: segue em memória e registra.
+            // Do not lose the session because of the disk: keep going in memory and report it.
             crashReporter.record(error, context: "app.openDatabase")
             database = LocalDatabase(inMemory: .init())
         }
@@ -91,7 +91,7 @@ final class AppEnvironment {
         )
     }
 
-    /// A URL do JSON de configuração vem do Info.plist (build setting REMOTE_CONFIG_URL).
+    /// The config JSON URL comes from Info.plist (REMOTE_CONFIG_URL build setting).
     private static func makeRemoteConfigLoader() -> RemoteConfigLoader? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "ClaraRemoteConfigURL") as? String,
               let url = URL(string: raw),
@@ -103,7 +103,7 @@ final class AppEnvironment {
         return RemoteConfigLoader(client: client, path: url.path())
     }
 
-    // MARK: Inicialização assíncrona
+    // MARK: Asynchronous startup
 
     private enum BootstrapStep: Sendable {
         case remoteConfig(RemoteConfig, RemoteConfigSource)
@@ -111,17 +111,17 @@ final class AppEnvironment {
         case aiPrewarmed
     }
 
-    /// Tarefas independentes em paralelo com `TaskGroup`; cada resultado é aplicado
-    /// assim que chega, de volta no MainActor (o corpo do grupo roda no main actor).
+    /// Independent tasks in parallel with a `TaskGroup`; each result is applied
+    /// as soon as it arrives, back on the MainActor (the group body runs on the main actor).
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
 
-        // 1) ID de instalação (Objective-C com completion handler, importado como async).
+        // 1) Installation ID (Objective-C with a completion handler, imported as async).
         let installationID = await installationIDProvider.installationID()
         flags.setInstallationID(installationID)
 
-        // 2) O resto em paralelo.
+        // 2) The rest in parallel.
         let loader = remoteConfigLoader
         let holidays = self.holidays
         let suggester = self.suggester
@@ -135,7 +135,7 @@ final class AppEnvironment {
                 }
             }
             group.addTask {
-                // Pré-carrega o cache do actor; a tela Hoje lê dele depois.
+                // Preloads the actor's cache; the Today screen reads from it later.
                 _ = try? await holidays.upcomingHoliday(from: today, within: 7)
                 return .holidaysWarmed
             }
@@ -156,7 +156,7 @@ final class AppEnvironment {
         }
     }
 
-    // MARK: Consentimento
+    // MARK: Consent
 
     var hasAnalyticsConsent: Bool {
         get { analytics.hasConsent }
@@ -166,7 +166,7 @@ final class AppEnvironment {
         }
     }
 
-    // MARK: Dependências das features
+    // MARK: Feature dependencies
 
     private(set) lazy var todayCoordinator = TodayCoordinator(
         dependencies: TodayDependencies(

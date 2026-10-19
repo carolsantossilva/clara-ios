@@ -3,12 +3,12 @@ import Foundation
 import Testing
 @testable import ClaraServices
 
-/// Usa o armazenamento legado de verdade, numa suíte de UserDefaults só do teste.
-@Suite("ID da instalação")
+/// Uses the real legacy store, in a UserDefaults suite owned by the test.
+@Suite("Installation ID")
 struct InstallationIDTests {
     let suiteName = "clara-tests-\(UUID().uuidString)"
 
-    @Test("cria o ID na primeira vez e devolve o mesmo depois")
+    @Test("creates the ID the first time and returns the same one afterwards")
     func createsOnceThenReuses() async {
         let store = CLALegacyKeyValueStore(suiteName: suiteName)
         defer { UserDefaults().removePersistentDomain(forName: suiteName) }
@@ -20,7 +20,7 @@ struct InstallationIDTests {
         #expect(second == first)
     }
 
-    @Test("lê o ID que o app antigo já tinha gravado")
+    @Test("reads the ID the old app had already stored")
     func readsExistingValue() async {
         let store = CLALegacyKeyValueStore(suiteName: suiteName)
         defer { UserDefaults().removePersistentDomain(forName: suiteName) }

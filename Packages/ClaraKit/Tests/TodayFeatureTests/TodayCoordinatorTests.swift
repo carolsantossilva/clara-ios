@@ -7,9 +7,9 @@ import SwiftUI
 import Testing
 @testable import TodayFeature
 
-/// O coordinator real ligado ao ViewModel real: confere que os toques da tela
-/// abrem a sheet certa, sem SwiftUI na tela.
-@Suite("Tela Hoje — Coordinator")
+/// The real coordinator wired to the real view model: checks that taps on the screen
+/// open the right sheet, with no SwiftUI on screen.
+@Suite("Today screen — Coordinator")
 @MainActor
 struct TodayCoordinatorTests {
     let database = LocalDatabase(inMemory: .init())
@@ -32,7 +32,7 @@ struct TodayCoordinatorTests {
         )
     }
 
-    @Test("o ViewModel navega pelo coordinator")
+    @Test("the view model navigates through the coordinator")
     func viewModelRoutesThroughCoordinator() {
         let coordinator = makeCoordinator()
 
@@ -43,7 +43,7 @@ struct TodayCoordinatorTests {
         #expect(coordinator.sheet?.id == "privacy")
     }
 
-    @Test("criar tarefa fecha a sheet; pausar abre a pausa da tarefa em foco")
+    @Test("creating a task closes the sheet; pausing opens the pause for the focused task")
     func createThenPause() async throws {
         let coordinator = makeCoordinator()
         coordinator.viewModel.addTaskTapped()
@@ -56,7 +56,7 @@ struct TodayCoordinatorTests {
         #expect(coordinator.sheet?.id == "pause-\(focus.id)")
     }
 
-    @Test("sugerir passos abre a sheet com o sugeridor das dependências")
+    @Test("suggesting steps opens the sheet with the injected suggester")
     func stepSuggestionsUseInjectedSuggester() async throws {
         let coordinator = makeCoordinator()
         await coordinator.viewModel.createTask(title: "Responder e-mail", nextAction: "")
@@ -65,19 +65,19 @@ struct TodayCoordinatorTests {
         coordinator.viewModel.suggestStepsTapped()
 
         guard case .steps(let steps)? = coordinator.sheet else {
-            Issue.record("esperava a sheet de passos, veio \(String(describing: coordinator.sheet?.id))")
+            Issue.record("expected the steps sheet, got \(String(describing: coordinator.sheet?.id))")
             return
         }
         #expect(steps.task.id == focus.id)
         await steps.load()
         guard case .loaded(let suggestion) = steps.state else {
-            Issue.record("esperava sugestões carregadas, veio \(steps.state)")
+            Issue.record("expected loaded suggestions, got \(steps.state)")
             return
         }
         #expect(suggestion.steps == ["Abrir a conversa"])
     }
 
-    @Test("sem tarefa em foco, pausar e sugerir não abrem nada")
+    @Test("with no focused task, pause and suggest open nothing")
     func nothingToPauseWithoutFocus() {
         let coordinator = makeCoordinator()
 

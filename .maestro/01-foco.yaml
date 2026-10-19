@@ -1,8 +1,8 @@
 appId: app.clara.ios
-name: Criar a primeira tarefa e começar o foco
+name: Create the first task and start focusing
 tags: [smoke]
 ---
-# -ui-testing: banco em memória e sem rede, então todo fluxo começa do zero.
+# -ui-testing: in-memory database and no network, so every flow starts from scratch.
 - launchApp:
     clearState: true
     arguments:

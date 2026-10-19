@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct ClaraApp: App {
-    // Criado uma única vez: é o "composition root", onde as dependências reais são montadas.
+    // Created only once: it is the "composition root", where the real dependencies are wired.
     @State private var environment = AppEnvironment.make()
 
     var body: some Scene {

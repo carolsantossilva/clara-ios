@@ -3,10 +3,10 @@ import ClaraDesignSystem
 import Observation
 import SwiftUI
 
-/// O "C" do MVVM-C: decide *como* navegar. O ViewModel só diz *o que* quer.
+/// The "C" in MVVM-C: decides *how* to navigate. The ViewModel only says *what* it wants.
 ///
-/// Vantagens: o ViewModel fica testável sem SwiftUI (os testes usam um router
-/// espião) e o fluxo de telas da feature fica num lugar só.
+/// Benefits: the ViewModel is testable without SwiftUI (tests use a spy router)
+/// and the feature's screen flow lives in one place.
 @MainActor
 @Observable
 public final class TodayCoordinator: TodayRouting {
@@ -30,8 +30,8 @@ public final class TodayCoordinator: TodayRouting {
     public let viewModel: TodayViewModel
 
     @ObservationIgnored private let dependencies: TodayDependencies
-    // Tela de privacidade pertence ao app (é transversal). Recebemos um construtor
-    // em vez de depender do módulo do app — a dependência aponta para dentro.
+    // The privacy screen belongs to the app (it is cross-cutting). We receive a builder
+    // instead of depending on the app module: the dependency points inward.
     @ObservationIgnored private let makePrivacyView: @MainActor () -> AnyView
 
     public init(dependencies: TodayDependencies, makePrivacyView: @escaping @MainActor () -> AnyView) {
@@ -56,7 +56,7 @@ public final class TodayCoordinator: TodayRouting {
         ))
     }
 
-    // MARK: Fábrica de telas
+    // MARK: Screen factory
 
     @ViewBuilder
     func view(for sheet: Sheet) -> some View {
@@ -75,10 +75,10 @@ public final class TodayCoordinator: TodayRouting {
     }
 }
 
-/// Ponto de entrada da feature para o app.
+/// The feature's entry point for the app.
 public struct TodayCoordinatorView: View {
-    // `@State` mantém o coordinator vivo enquanto a view existir, mesmo que o
-    // `body` do pai seja recalculado várias vezes.
+    // `@State` keeps the coordinator alive while the view exists, even if the
+    // parent's `body` is recomputed many times.
     @State private var coordinator: TodayCoordinator
 
     public init(coordinator: TodayCoordinator) {

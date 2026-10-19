@@ -1,9 +1,9 @@
-# Configuração do gitleaks (pre-commit e CI). Usa as regras padrão.
+# gitleaks configuration (pre-commit and CI). Uses the default rules.
 title = "clara-ios"
 
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Imagens de referência dos snapshot tests"
+description = "Snapshot test reference images"
 paths = ['''__Snapshots__/''']

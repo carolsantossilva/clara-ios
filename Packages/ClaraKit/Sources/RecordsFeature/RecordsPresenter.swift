@@ -7,12 +7,12 @@ protocol RecordsPresentationLogic: AnyObject {
     func presentFailure(title: String, message: String)
 }
 
-/// Transforma dados de domínio em textos prontos para a tela.
-/// É código puro e síncrono, então os testes verificam a formatação sem UIKit.
+/// Turns domain data into text ready for the screen.
+/// It is pure, synchronous code, so tests check the formatting without UIKit.
 @MainActor
 final class RecordsPresenter: RecordsPresentationLogic {
-    // `weak`: a View é dona do Interactor, que é dono do Presenter. Sem `weak`,
-    // Presenter → View fecharia um ciclo de retenção e a tela nunca seria liberada.
+    // `weak`: the View owns the Interactor, which owns the Presenter. Without `weak`,
+    // Presenter → View would close a retain cycle and the screen would never be freed.
     weak var viewController: (any RecordsDisplayLogic)?
 
     func presentMoments(_ response: Records.Load.Response) {

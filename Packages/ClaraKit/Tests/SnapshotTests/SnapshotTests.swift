@@ -7,13 +7,13 @@ import Testing
 import UIKit
 @testable import RecordsFeature
 
-/// Snapshot tests comparam a tela renderizada com uma imagem de referência.
+/// Snapshot tests compare the rendered screen with a reference image.
 ///
-/// Para não ficarem frágeis:
-/// - rode sempre no mesmo simulador/versão (o CI fixa o destino);
-/// - dados fixos (datas com fuso explícito, sem `Date()`);
-/// - a primeira execução grava as referências em `__Snapshots__` e falha de
-///   propósito; as seguintes comparam.
+/// To keep them from being brittle:
+/// - always run on the same simulator/version (CI pins the destination);
+/// - fixed data (dates with an explicit time zone, no `Date()`);
+/// - the first run records the references in `__Snapshots__` and fails on
+///   purpose; later runs compare.
 @Suite("Snapshots")
 @MainActor
 struct SnapshotTests {
@@ -56,8 +56,8 @@ struct SnapshotTests {
         )
     }
 
-    /// Dynamic Type no tamanho de acessibilidade: o layout não pode cortar texto.
-    /// Tela mais alta que o iPhone para a imagem incluir as células, não só o cabeçalho.
+    /// Dynamic Type at an accessibility size: the layout must not clip text.
+    /// Taller than the iPhone screen so the image includes the cells, not only the header.
     @Test func recordsScreenAccessibilityText() {
         assertSnapshot(
             of: makeRecordsScreen(),
@@ -70,7 +70,7 @@ struct SnapshotTests {
     }
 
     private func makeRecordsScreen() -> UIViewController {
-        // Sem interactor: a View é alimentada direto com o ViewModel do Presenter.
+        // No interactor: the View is fed the Presenter's ViewModel directly.
         let viewController = RecordsViewController()
         viewController.loadViewIfNeeded()
         viewController.displayMoments(Records.Load.ViewModel(rows: rows))

@@ -1,6 +1,6 @@
-# Fluxos de ponta a ponta com Maestro (https://maestro.dev).
-# Rodar localmente, com o app instalado num simulador:  maestro test .maestro
-# O CI roda todos os fluxos no job "Fluxos de ponta a ponta (Maestro)".
+# End-to-end flows with Maestro (https://maestro.dev).
+# Run locally, with the app installed on a simulator:  maestro test .maestro
+# CI runs every flow in the "End-to-end flows (Maestro)" job.
 flows:
   - "*.yaml"
 executionOrder:

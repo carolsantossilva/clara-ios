@@ -57,7 +57,10 @@ struct RecordsRouterTests {
 
     @Test("salvar no formulário fecha a tela só quando deu certo")
     func saveDismissesOnlyOnSuccess() async throws {
-        makeRouter().routeToNewMoment(kind: .daily)
+        // O formulário guarda o Router com referência fraca; na tela, quem o mantém
+        // vivo é o ViewController. Aqui o teste segura a referência.
+        let router = makeRouter()
+        router.routeToNewMoment(kind: .daily)
         let form = try presentedForm()
         let draft = MomentDraft(kind: .daily, occurredAt: now, mood: .good)
 
@@ -69,6 +72,7 @@ struct RecordsRouterTests {
         #expect(await form.onSave(draft) == .saved)
         #expect(viewController.dismissCount == 1)
         #expect(interactor.savedDrafts == [draft, draft])
+        withExtendedLifetime(router) {}
     }
 
     @Test("excluir pede confirmação com a opção de manter")

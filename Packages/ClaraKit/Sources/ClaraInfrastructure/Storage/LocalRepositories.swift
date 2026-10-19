@@ -1,8 +1,8 @@
 import ClaraCore
 import Foundation
 
-// Implementações dos repositórios sobre o LocalDatabase.
-// `now` é injetado para os testes controlarem o tempo (sem depender do relógio real).
+// Repository implementations on top of LocalDatabase.
+// `now` is injected so tests control time (without depending on the real clock).
 
 public struct LocalTaskRepository: TaskRepository {
     private let database: LocalDatabase
@@ -128,7 +128,7 @@ public struct LocalMomentRepository: MomentRepository {
         let date = now()
         let moment = Moment(
             kind: draft.kind,
-            // Check-in diário vale para "agora"; o momento avulso usa a hora escolhida.
+            // A daily check-in is for "now"; a one-off moment uses the chosen time.
             occurredAt: draft.kind == .daily ? date : draft.occurredAt,
             timeZoneIdentifier: timeZone().identifier,
             mood: draft.mood,
@@ -147,7 +147,7 @@ public struct LocalMomentRepository: MomentRepository {
             guard let index = snapshot.moments.firstIndex(where: { $0.id == moment.id && $0.deletedAt == nil }) else {
                 throw StorageError.notFound
             }
-            // Equivalente ao `UPDATE ... WHERE revision = ?` do app original.
+            // Equivalent to the original app's `UPDATE ... WHERE revision = ?`.
             guard snapshot.moments[index].revision == moment.revision else {
                 throw StorageError.conflict
             }
@@ -168,7 +168,7 @@ public struct LocalMomentRepository: MomentRepository {
             guard snapshot.moments[index].revision == moment.revision else {
                 throw StorageError.conflict
             }
-            // Exclusão lógica: mantém o histórico para uma futura sincronização.
+            // Soft delete: keeps the history for a future sync.
             snapshot.moments[index].deletedAt = date
             snapshot.moments[index].revision += 1
             snapshot.moments[index].updatedAt = date

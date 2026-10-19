@@ -1,7 +1,7 @@
 import ClaraCore
 import Foundation
 
-// MARK: - Repositórios que falham
+// MARK: - Failing repositories
 
 public struct TestError: Error, Equatable {
     public init() {}

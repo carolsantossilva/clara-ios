@@ -1,13 +1,13 @@
 import Foundation
 import os
 
-// Dublês compartilhados entre as suítes. Ficam num target próprio (não de teste)
-// para que várias suítes os importem sem duplicação.
+// Doubles shared across suites. They live in their own (non-test) target
+// so several suites can import them without duplication.
 
-// MARK: - Relógio imediato
+// MARK: - Immediate clock
 
-/// Relógio que não espera: `sleep` só cede a vez. Testes de timer rodam em
-/// milissegundos e sem depender do tempo real (uma fonte clássica de flakiness).
+/// A clock that does not wait: `sleep` only yields. Timer tests run in
+/// milliseconds without depending on real time (a classic source of flakiness).
 public struct ImmediateClock: Clock {
     public struct Instant: InstantProtocol {
         public var offset: Duration
@@ -36,9 +36,9 @@ public struct ImmediateClock: Clock {
     }
 }
 
-/// "Agora" que avança um segundo a cada leitura. Garante ordem estável entre
-/// registros criados em sequência — com `Date()` real, dois registros podem
-/// ganhar o mesmo instante e a ordenação do teste viraria sorte.
+/// A "now" that moves one second forward on every read. Guarantees a stable order for
+/// records created in sequence: with a real `Date()`, two records can get the
+/// same instant and the test's ordering would come down to luck.
 public final class SteppingNow: Sendable {
     private let current: OSAllocatedUnfairLock<Date>
 

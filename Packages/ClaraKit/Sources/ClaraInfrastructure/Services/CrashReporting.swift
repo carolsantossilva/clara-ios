@@ -1,10 +1,10 @@
 import Foundation
 import os
 
-/// Abstração de crash reporting. Em produção, um adaptador para Crashlytics,
-/// Sentry ou Bugsnag implementaria este protocolo; o resto do app não muda.
+/// Crash reporting abstraction. In production, an adapter for Crashlytics,
+/// Sentry or Bugsnag would implement this protocol; the rest of the app does not change.
 public protocol CrashReporter: Sendable {
-    /// Erro não fatal com um contexto curto (nunca texto da usuária).
+    /// Non-fatal error with a short context (never user text).
     func record(_ error: any Error, context: String)
     func breadcrumb(_ message: String)
 }

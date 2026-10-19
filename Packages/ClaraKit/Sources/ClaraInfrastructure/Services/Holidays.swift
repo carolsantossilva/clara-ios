@@ -1,8 +1,7 @@
 import ClaraCore
-import ClaraNetworking
 import Foundation
 
-/// Feriado nacional vindo da BrasilAPI (https://brasilapi.com.br/docs#tag/Feriados-Nacionais).
+/// National holiday from BrasilAPI (https://brasilapi.com.br/docs#tag/Feriados-Nacionais).
 public struct Holiday: Decodable, Equatable, Sendable {
     public let date: String
     public let name: String
@@ -24,11 +23,11 @@ struct HolidaysEndpoint: Endpoint {
 }
 
 public protocol HolidayProviding: Sendable {
-    /// O próximo feriado entre `day` e `day + days`, se houver.
+    /// The next holiday between `day` and `day + days`, if any.
     func upcomingHoliday(from day: LocalDay, within days: Int) async throws -> Holiday?
 }
 
-/// Privacidade: a requisição só leva o ano. Nenhum dado da usuária sai do aparelho.
+/// Privacy: the request only carries the year. No user data leaves the device.
 public actor BrasilAPIHolidayService: HolidayProviding {
     private let client: any HTTPClient
     private var cache: [Int: [Holiday]] = [:]
@@ -44,7 +43,7 @@ public actor BrasilAPIHolidayService: HolidayProviding {
         if end.year == day.year {
             holidays = try await self.holidays(year: day.year)
         } else {
-            // A janela cruza o ano novo: busca os dois anos em paralelo.
+            // The window crosses New Year: fetch both years in parallel.
             async let current = self.holidays(year: day.year)
             async let next = self.holidays(year: end.year)
             holidays = try await current + next
@@ -56,9 +55,9 @@ public actor BrasilAPIHolidayService: HolidayProviding {
         return candidates.min { $0.day < $1.day }?.holiday
     }
 
-    /// Reentrância de actor: enquanto esperamos a rede (`await`), outra chamada pode
-    /// entrar no actor. Sem o dicionário `inFlight`, duas telas pedindo 2026 ao mesmo
-    /// tempo fariam duas requisições. Com ele, a segunda aguarda a mesma Task.
+    /// Actor reentrancy: while we wait for the network (`await`), another call can
+    /// enter the actor. Without the `inFlight` dictionary, two screens asking for 2026 at
+    /// the same time would make two requests. With it, the second awaits the same Task.
     func holidays(year: Int) async throws -> [Holiday] {
         if let cached = cache[year] {
             return cached
@@ -78,7 +77,7 @@ public actor BrasilAPIHolidayService: HolidayProviding {
     }
 }
 
-/// Usado em previews, UI tests e quando a flag está desligada.
+/// Used in previews, UI tests and when the flag is off.
 public struct StaticHolidayProvider: HolidayProviding {
     private let holiday: Holiday?
 

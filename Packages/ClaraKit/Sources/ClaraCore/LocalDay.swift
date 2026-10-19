@@ -1,9 +1,9 @@
 import Foundation
 
-/// Um dia do calendário (sem hora), como "2026-09-20".
+/// A calendar day (no time), like "2026-09-20".
 ///
-/// O resumo filtra por dia *local do momento*: um registro feito às 23h em São Paulo
-/// pertence àquele dia, mesmo que em UTC já seja o dia seguinte.
+/// The summary filters by the moment's *local day*: a record made at 11 p.m. in São Paulo
+/// belongs to that day, even if it is already the next day in UTC.
 public struct LocalDay: Comparable, Hashable, Sendable, CustomStringConvertible {
     public let year: Int
     public let month: Int
@@ -20,7 +20,7 @@ public struct LocalDay: Comparable, Hashable, Sendable, CustomStringConvertible 
         self.init(year: components.year ?? 0, month: components.month ?? 0, day: components.day ?? 0)
     }
 
-    /// Lê "AAAA-MM-DD" e rejeita datas impossíveis, como 2026-02-31.
+    /// Parses "YYYY-MM-DD" and rejects impossible dates, such as 2026-02-31.
     public init?(isoString: String) {
         let parts = isoString.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }

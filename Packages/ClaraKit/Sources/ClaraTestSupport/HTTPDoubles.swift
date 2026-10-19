@@ -1,4 +1,4 @@
-import ClaraNetworking
+import ClaraInfrastructure
 import os
 
 // MARK: - HTTP
@@ -11,7 +11,7 @@ public final class FakeHTTPClient: HTTPClient, Sendable {
     private let paths = OSAllocatedUnfairLock(initialState: [String]())
     private let responder: @Sendable (String) async throws -> any Sendable
 
-    /// - Parameter responder: recebe o `path` pedido e devolve a resposta já decodificada.
+    /// - Parameter responder: receives the requested `path` and returns the already decoded response.
     public init(responder: @escaping @Sendable (String) async throws -> any Sendable) {
         self.responder = responder
     }

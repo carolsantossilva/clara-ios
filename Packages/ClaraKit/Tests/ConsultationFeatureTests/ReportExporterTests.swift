@@ -1,13 +1,13 @@
 import CoreGraphics
 import Foundation
 import Testing
-@testable import ConsultationFeature
+@testable import ClaraUI
 
-/// Gera um PDF de verdade com o motor de impressão do UIKit e confere o arquivo.
-@Suite("Consulta — exportar PDF")
+/// Renders a real PDF with the UIKit print engine and checks the file.
+@Suite("Consultation — PDF export")
 @MainActor
 struct ReportExporterTests {
-    @Test("o resumo vira um PDF A4 no diretório temporário")
+    @Test("the summary becomes an A4 PDF in the temporary directory")
     func exportsA4PDF() throws {
         let fileName = "resumo-\(UUID().uuidString).pdf"
 

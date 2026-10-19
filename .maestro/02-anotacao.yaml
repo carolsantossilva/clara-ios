@@ -6,6 +6,12 @@ tags: [smoke]
     clearState: true
     arguments:
       "-ui-testing": true
+# O campo fica abaixo da dobra; sem rolar, o toque cairia na tab bar.
+- scrollUntilVisible:
+    element:
+      id: "parking.field"
+    direction: DOWN
+    centerElement: true
 - tapOn:
     id: "parking.field"
 - inputText: "Comprar pilhas"

@@ -1,7 +1,7 @@
 import Foundation
 import os
 import Testing
-@testable import ClaraNetworking
+@testable import ClaraInfrastructure
 
 private struct Greeting: Decodable, Equatable, Sendable {
     let message: String
@@ -13,10 +13,10 @@ private struct GreetingEndpoint: Endpoint {
     var queryItems: [URLQueryItem] { [URLQueryItem(name: "lang", value: "pt")] }
 }
 
-/// `.serialized`: o stub de URLProtocol é estado global (estático). Rodando em
-/// paralelo, um teste trocaria a resposta do outro — o exemplo clássico de teste
-/// instável. Serializar a suíte elimina a corrida.
-@Suite("Cliente HTTP", .serialized)
+/// `.serialized`: the URLProtocol stub is global (static) state. Running in
+/// parallel, one test would swap the other's response, the classic flaky test.
+/// Serializing the suite removes the race.
+@Suite("HTTP client", .serialized)
 struct URLSessionHTTPClientTests {
     private func makeClient(retry: RetryPolicy = .none) -> URLSessionHTTPClient {
         let configuration = URLSessionConfiguration.ephemeral
@@ -28,7 +28,7 @@ struct URLSessionHTTPClientTests {
         )
     }
 
-    @Test("monta a URL com path e query e decodifica a resposta")
+    @Test("builds the URL with path and query and decodes the response")
     func decodesSuccess() async throws {
         StubURLProtocol.setResponses([.init(status: 200, body: #"{"message":"olá"}"#)])
 
@@ -38,7 +38,7 @@ struct URLSessionHTTPClientTests {
         #expect(StubURLProtocol.requestedURLs.last?.absoluteString == "https://api.example.com/greeting?lang=pt")
     }
 
-    @Test("status fora de 2xx vira APIError.status")
+    @Test("a non-2xx status becomes APIError.status")
     func mapsHTTPStatus() async {
         StubURLProtocol.setResponses([.init(status: 404, body: "{}")])
 
@@ -47,7 +47,7 @@ struct URLSessionHTTPClientTests {
         }
     }
 
-    @Test("tenta de novo em erro 5xx e devolve o sucesso seguinte")
+    @Test("retries on 5xx and returns the next success")
     func retriesServerErrors() async throws {
         StubURLProtocol.setResponses([
             .init(status: 503, body: "{}"),
@@ -61,7 +61,7 @@ struct URLSessionHTTPClientTests {
         #expect(StubURLProtocol.requestedURLs.count == 2)
     }
 
-    @Test("não tenta de novo em erro 4xx")
+    @Test("does not retry on 4xx")
     func doesNotRetryClientErrors() async {
         StubURLProtocol.setResponses([.init(status: 400, body: "{}"), .init(status: 200, body: #"{"message":"x"}"#)])
 
@@ -71,7 +71,7 @@ struct URLSessionHTTPClientTests {
         #expect(StubURLProtocol.requestedURLs.count == 1)
     }
 
-    @Test("JSON inesperado vira APIError.decoding")
+    @Test("unexpected JSON becomes APIError.decoding")
     func mapsDecodingErrors() async throws {
         StubURLProtocol.setResponses([.init(status: 200, body: #"{"other":1}"#)])
 
@@ -84,7 +84,7 @@ struct URLSessionHTTPClientTests {
     }
 }
 
-/// Intercepta as requisições da URLSession e devolve respostas enfileiradas.
+/// Intercepts URLSession requests and returns queued responses.
 final class StubURLProtocol: URLProtocol {
     struct Response: Sendable {
         let status: Int
@@ -96,8 +96,8 @@ final class StubURLProtocol: URLProtocol {
         var urls: [URL] = []
     }
 
-    // Estado estático compartilhado entre threads da URLSession, guardado por um
-    // lock Sendable: sem `nonisolated(unsafe)`.
+    // Static state shared across URLSession threads, guarded by a
+    // Sendable lock: no `nonisolated(unsafe)`.
     private static let state = OSAllocatedUnfairLock(initialState: State())
 
     static func setResponses(_ responses: [Response]) {

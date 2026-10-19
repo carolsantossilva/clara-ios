@@ -4,12 +4,12 @@ public struct TimeoutError: Error, Equatable {
     public init() {}
 }
 
-/// Executa `operation` com prazo. Duas tarefas filhas competem num TaskGroup:
-/// a que terminar primeiro vence e a outra é cancelada.
+/// Runs `operation` with a deadline. Two child tasks race in a TaskGroup:
+/// the first to finish wins and the other is cancelled.
 ///
-/// Isso só funciona porque o cancelamento no Swift Concurrency é *cooperativo*:
-/// `Task.sleep` e `URLSession` checam o cancelamento; um loop de CPU que não
-/// chama `Task.checkCancellation()` continuaria rodando.
+/// This only works because cancellation in Swift Concurrency is *cooperative*:
+/// `Task.sleep` and `URLSession` check for cancellation; a CPU loop that does not
+/// call `Task.checkCancellation()` would keep running.
 public func withTimeout<T: Sendable>(
     _ duration: Duration,
     operation: @escaping @Sendable () async throws -> T

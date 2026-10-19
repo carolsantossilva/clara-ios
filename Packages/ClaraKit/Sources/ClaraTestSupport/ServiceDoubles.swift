@@ -1,7 +1,7 @@
-import ClaraServices
+import ClaraInfrastructure
 import os
 
-// MARK: - Analytics e crash
+// MARK: - Analytics and crashes
 
 public final class SpyAnalyticsTracker: AnalyticsTracker, Sendable {
     private let tracked = OSAllocatedUnfairLock(initialState: [AnalyticsEvent]())

@@ -1,12 +1,12 @@
 import ClaraCore
 import Foundation
 
-/// Passos pequenos sugeridos para começar uma tarefa.
+/// Small steps suggested to start a task.
 public struct StepSuggestion: Equatable, Sendable {
     public enum Source: String, Sendable {
-        /// Modelo de linguagem da Apple rodando no aparelho (Foundation Models).
+        /// Apple's language model running on the device (Foundation Models).
         case onDevice = "on_device"
-        /// Regras simples com NaturalLanguage, quando não há modelo disponível.
+        /// Simple rules with NaturalLanguage, when no model is available.
         case heuristic
     }
 
@@ -19,12 +19,12 @@ public struct StepSuggestion: Equatable, Sendable {
     }
 }
 
-/// Decisão de produto: a IA só *sugere* e sempre a pedido da usuária. Ela escolhe
-/// um passo (ou nenhum). O texto não sai do aparelho e não há interpretação clínica.
+/// Product decision: the AI only *suggests*, and only when the user asks. She picks
+/// a step (or none). The text never leaves the device and there is no clinical interpretation.
 public protocol StepSuggesting: Sendable {
     var isAvailable: Bool { get async }
     func suggestSteps(for taskTitle: String) async throws -> StepSuggestion
-    /// Carrega o modelo antes do primeiro uso, para a resposta chegar mais rápido.
+    /// Loads the model before first use, so the answer arrives faster.
     func prewarm() async
 }
 
@@ -38,9 +38,9 @@ public enum StepSuggestionError: Error, Equatable {
     case noSteps
 }
 
-/// Tenta o provedor principal (IA no aparelho) e, se ele estiver indisponível,
-/// falhar ou demorar demais, usa o substituto. Decorator + Open/Closed: dá para
-/// trocar ou empilhar provedores sem mexer em quem chama.
+/// Tries the main provider (on-device AI) and, if it is unavailable, fails
+/// or takes too long, uses the fallback. Decorator + Open/Closed: providers can be
+/// swapped or stacked without touching the caller.
 public struct FallbackStepSuggester: StepSuggesting {
     private let primary: any StepSuggesting
     private let fallback: any StepSuggesting
@@ -71,7 +71,7 @@ public struct FallbackStepSuggester: StepSuggesting {
             } catch is CancellationError {
                 throw CancellationError()
             } catch {
-                // Cai para o substituto: a usuária sempre recebe alguma ajuda.
+                // Falls back: the user always gets some help.
             }
         }
         return try await fallback.suggestSteps(for: taskTitle)
@@ -83,7 +83,7 @@ public struct FallbackStepSuggester: StepSuggesting {
 }
 
 public enum StepSuggesterFactory {
-    /// Escolhe o melhor provedor para este aparelho em tempo de execução.
+    /// Picks the best provider for this device at runtime.
     public static func makeDefault() -> any StepSuggesting {
         let heuristic = HeuristicStepSuggester()
         #if canImport(FoundationModels)

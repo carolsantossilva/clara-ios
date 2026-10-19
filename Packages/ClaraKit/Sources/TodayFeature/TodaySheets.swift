@@ -16,10 +16,19 @@ struct AddTaskSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: ClaraSpacing.large) {
-                    LabeledTextField("O que você quer fazer?", text: $title, placeholder: "ex.: responder a mensagem da clínica", isOptional: false)
-                        .accessibilityIdentifier("addTask.title")
-                    LabeledTextField("Qual é o primeiro passo?", text: $nextAction, placeholder: "ex.: abrir a conversa")
-                        .accessibilityIdentifier("addTask.nextAction")
+                    LabeledTextField(
+                        "O que você quer fazer?",
+                        text: $title,
+                        placeholder: "ex.: responder a mensagem da clínica",
+                        isOptional: false,
+                        identifier: "addTask.title"
+                    )
+                    LabeledTextField(
+                        "Qual é o primeiro passo?",
+                        text: $nextAction,
+                        placeholder: "ex.: abrir a conversa",
+                        identifier: "addTask.nextAction"
+                    )
                     Button("Salvar tarefa") {
                         isSaving = true
                         Task {
@@ -61,8 +70,12 @@ struct PauseSheet: View {
                     Text(task.title)
                         .font(ClaraFont.title)
                         .foregroundStyle(ClaraColor.ink)
-                    LabeledTextField("Onde você parou?", text: $whereStopped, placeholder: "ex.: parei na parte dos documentos")
-                        .accessibilityIdentifier("pause.whereStopped")
+                    LabeledTextField(
+                        "Onde você parou?",
+                        text: $whereStopped,
+                        placeholder: "ex.: parei na parte dos documentos",
+                        identifier: "pause.whereStopped"
+                    )
                     LabeledTextField(
                         "Qual será o próximo passo?",
                         text: $nextStep,

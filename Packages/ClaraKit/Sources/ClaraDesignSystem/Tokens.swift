@@ -9,8 +9,8 @@ public enum ClaraPalette {
     public static let background = UIColor.dynamic(light: 0xF8F5F1, dark: 0x1B1920)
     public static let paper = UIColor.dynamic(light: 0xFFFDF9, dark: 0x25222C)
     public static let ink = UIColor.dynamic(light: 0x292537, dark: 0xF2EFF6)
-    public static let muted = UIColor.dynamic(light: 0x6A6574, dark: 0xB5AFBE)
-    public static let eyebrow = UIColor.dynamic(light: 0x786C8C, dark: 0xB9ADCB)
+    public static let muted = UIColor.dynamic(light: 0x5A5564, dark: 0xB5AFBE)
+    public static let eyebrow = UIColor.dynamic(light: 0x5E5270, dark: 0xB9ADCB)
     public static let lavender = UIColor.dynamic(light: 0xF0ECF8, dark: 0x332D40)
     public static let lavenderDeep = UIColor.dynamic(light: 0x69558A, dark: 0xC9BBE4)
     public static let onLavenderDeep = UIColor.dynamic(light: 0xFFFDF9, dark: 0x1B1920)
@@ -54,11 +54,13 @@ public enum ClaraSpacing {
 }
 
 /// Tipografia baseada em estilos de texto: tudo acompanha o Dynamic Type.
+/// Evite `caption2`: ele já está no tamanho mínimo (11 pt) no tamanho padrão e não
+/// diminui com o ajuste do sistema; a auditoria de acessibilidade aponta isso.
 public enum ClaraFont {
     public static let largeTitle = Font.system(.largeTitle, design: .serif)
     public static let title = Font.system(.title2, design: .serif)
     public static let headline = Font.system(.title3, design: .serif)
-    public static let eyebrow = Font.caption2.weight(.heavy)
+    public static let eyebrow = Font.caption.weight(.heavy)
 
     /// Versão UIKit. Cria a fonte no tamanho base e escala com `UIFontMetrics`, para
     /// que `adjustsFontForContentSizeCategory` funcione também com fonte serifada.

@@ -82,6 +82,8 @@ public struct EyebrowText: View {
             .font(ClaraFont.eyebrow)
             .tracking(1.2)
             .foregroundStyle(ClaraColor.eyebrow)
+            // Com letra grande, quebra a linha em vez de cortar o texto.
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 
@@ -263,6 +265,8 @@ public struct EmptyStateView: View {
 
 public struct BrandHeader<Badge: View>: View {
     let badge: Badge
+    // O quadrado da marca cresce junto com a letra, para o "c" não ser cortado.
+    @ScaledMetric(relativeTo: .title) private var markSize: CGFloat = 34
 
     public init(@ViewBuilder badge: () -> Badge) {
         self.badge = badge()
@@ -272,15 +276,15 @@ public struct BrandHeader<Badge: View>: View {
         HStack {
             HStack(spacing: 9) {
                 Text("c")
-                    .font(.system(size: 26, design: .serif).italic())
+                    .font(.system(.title, design: .serif).italic())
                     .foregroundStyle(ClaraColor.onLavenderDeep)
-                    .frame(width: 34, height: 34)
+                    .frame(width: markSize, height: markSize)
                     .background(ClaraColor.lavenderDeep, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
                     (Text("clara").foregroundColor(ClaraColor.ink) + Text(".").foregroundColor(ClaraColor.brandDot))
                         .font(.title3.weight(.heavy))
                     Text("um dia de cada vez")
-                        .font(.caption2)
+                        .font(.caption)
                         .foregroundStyle(ClaraColor.muted)
                 }
             }
@@ -299,7 +303,7 @@ public struct LocalOnlyBadge: View {
         HStack(spacing: 6) {
             Circle().fill(ClaraColor.sageInk).frame(width: 7, height: 7)
             Text("Só neste aparelho")
-                .font(.caption2.weight(.bold))
+                .font(.caption.weight(.bold))
         }
         .foregroundStyle(ClaraColor.sageInk)
         .padding(.vertical, 7)

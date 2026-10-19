@@ -1,14 +1,14 @@
 appId: app.clara.ios
-name: Guardar uma distração para depois
+name: Park a distraction for later
 tags: [smoke]
 ---
 - launchApp:
     clearState: true
     arguments:
       "-ui-testing": true
-# O campo fica abaixo da dobra; sem rolar, o toque cairia na tab bar. Sem
-# centerElement: o campo está no fim da lista, então a rolagem para antes de
-# conseguir centralizá-lo e o passo falhava mesmo com o campo visível.
+# The field is below the fold; without scrolling, the tap would land on the tab bar.
+# No centerElement: the field is at the end of the list, so scrolling stops before
+# it can be centered and the step failed even with the field on screen.
 - scrollUntilVisible:
     element:
       id: "parking.field"
@@ -18,5 +18,5 @@ tags: [smoke]
 - inputText: "Comprar pilhas"
 - tapOn:
     id: "parking.add"
-# A linha é um botão: o Maestro lê o rótulo de acessibilidade, o mesmo que o VoiceOver.
+# The row is a button: Maestro reads its accessibility label, the same one VoiceOver reads.
 - assertVisible: "Concluir: Comprar pilhas"

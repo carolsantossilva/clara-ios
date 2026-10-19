@@ -1,5 +1,5 @@
 appId: app.clara.ios
-name: Check-in diário aparece na linha do tempo
+name: Daily check-in shows up on the timeline
 tags: [smoke]
 ---
 - launchApp:

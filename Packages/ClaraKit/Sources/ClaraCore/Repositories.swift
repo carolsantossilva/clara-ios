@@ -1,8 +1,8 @@
 import Foundation
 
-// Contratos de persistência. As features dependem destes protocolos, não da
-// implementação (Dependency Inversion): em produção entra o banco local, nos
-// testes entra um banco em memória ou um dublê que falha de propósito.
+// Persistence contracts. Features depend on these protocols, not on the
+// implementation (Dependency Inversion): production uses the local database,
+// tests use an in-memory database or a double that fails on purpose.
 
 public protocol TaskRepository: Sendable {
     func create(title: String, nextAction: String) async throws -> FocusTask
@@ -28,7 +28,7 @@ public protocol MomentRepository: Sendable {
     func list() async throws -> [Moment]
     @discardableResult
     func create(_ draft: MomentDraft) async throws -> Moment
-    /// Falha com `StorageError.conflict` se o registro mudou desde que foi lido.
+    /// Fails with `StorageError.conflict` if the record changed since it was read.
     @discardableResult
     func update(_ moment: Moment) async throws -> Moment
     func delete(_ moment: Moment) async throws
@@ -36,6 +36,6 @@ public protocol MomentRepository: Sendable {
 
 public enum StorageError: Error, Equatable {
     case notFound
-    /// Controle de concorrência otimista: a revisão salva não é a que foi editada.
+    /// Optimistic concurrency control: the saved revision is not the one that was edited.
     case conflict
 }

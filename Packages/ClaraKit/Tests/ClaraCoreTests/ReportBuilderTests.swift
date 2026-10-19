@@ -3,12 +3,12 @@ import Foundation
 import Testing
 @testable import ClaraCore
 
-// Portados de `report.test.ts` do app React Native.
-@Suite("Resumo para consulta")
+// Ported from the React Native app's `report.test.ts`.
+@Suite("Appointment summary")
 struct ReportBuilderTests {
     let day = LocalDay(year: 2026, month: 9, day: 20)
 
-    @Test("mantém só os selecionados, ordena por horário e preserva o texto da usuária")
+    @Test("keeps only the selected ones, sorts by time and preserves the user's text")
     func keepsSelectedSortedAndVerbatim() {
         let later = Fixtures.moment(at: "2026-09-20T19:00:00-03:00", mood: .difficult, note: "  Reunião longa  ")
         let earlier = Fixtures.moment(kind: .daily, at: "2026-09-20T10:00:00-03:00", mood: .good)
@@ -25,9 +25,9 @@ struct ReportBuilderTests {
         #expect(report.questionsAndNotes == "Quero conversar sobre rotina.")
     }
 
-    @Test("usa o dia local do momento, não o dia em UTC")
+    @Test("uses the moment's local day, not the UTC day")
     func filtersByLocalDayOfTheMoment() {
-        // 23h em São Paulo = 02h do dia seguinte em UTC.
+        // 11 p.m. in São Paulo = 2 a.m. the next day in UTC.
         let lateNight = Fixtures.moment(at: "2026-09-20T23:00:00-03:00")
 
         let report = ReportBuilder.build(
@@ -38,13 +38,13 @@ struct ReportBuilderTests {
         #expect(report.entries.count == 1)
     }
 
-    @Test("ignora registros excluídos")
+    @Test("ignores deleted records")
     func ignoresDeleted() {
         let deleted = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", deletedAt: Fixtures.date("2026-09-21T10:00:00Z"))
         #expect(ReportBuilder.eligible(start: day, end: day, in: [deleted]).isEmpty)
     }
 
-    @Test("escapa o texto pessoal antes de colocá-lo no documento imprimível")
+    @Test("escapes personal text before putting it in the printable document")
     func escapesPersonalText() {
         let entry = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", note: "<script>alert('oi')</script>")
         let report = ReportBuilder.build(
@@ -61,32 +61,32 @@ struct ReportBuilderTests {
 
 @Suite("LocalDay")
 struct LocalDayTests {
-    @Test("rejeita datas incompletas e impossíveis", arguments: ["2026-02-31", "2026-13-01", "2026-09", "abc"])
+    @Test("rejects incomplete and impossible dates", arguments: ["2026-02-31", "2026-13-01", "2026-09", "abc"])
     func rejectsInvalid(_ text: String) {
         #expect(LocalDay(isoString: text) == nil)
     }
 
-    @Test("soma dias atravessando o ano")
+    @Test("adds days across the year boundary")
     func addsAcrossYears() {
         #expect(LocalDay(year: 2026, month: 12, day: 29).adding(days: 5) == LocalDay(year: 2027, month: 1, day: 3))
     }
 }
 
-@Suite("Rascunho de momento")
+@Suite("Moment draft")
 struct MomentDraftTests {
-    @Test("precisa de uma palavra ou de algum texto")
+    @Test("needs a word or some text")
     func requiresSomeContent() {
         var draft = MomentDraft(kind: .daily, occurredAt: .now)
         #expect(!draft.hasContent)
 
         draft.note = "   "
-        #expect(!draft.hasContent, "Só espaços não contam")
+        #expect(!draft.hasContent, "Whitespace alone does not count")
 
         draft.mood = .okay
         #expect(draft.hasContent)
     }
 
-    @Test("ao editar sem mudar a hora, preserva o fuso original")
+    @Test("editing without changing the time keeps the original time zone")
     func preservesTimeZoneWhenTimeIsUnchanged() {
         let original = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", note: "antes")
         var draft = MomentDraft(editing: original)
@@ -101,13 +101,13 @@ struct MomentDraftTests {
 
 @Suite("Timeout")
 struct TimeoutTests {
-    @Test("devolve o resultado quando a operação termina a tempo")
+    @Test("returns the result when the operation finishes in time")
     func returnsResult() async throws {
         let value = try await withTimeout(.seconds(1)) { 42 }
         #expect(value == 42)
     }
 
-    @Test("lança TimeoutError quando a operação demora demais")
+    @Test("throws TimeoutError when the operation takes too long")
     func throwsOnTimeout() async {
         await #expect(throws: TimeoutError.self) {
             try await withTimeout(.milliseconds(10)) {

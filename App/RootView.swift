@@ -1,40 +1,25 @@
-import ClaraDesignSystem
-import ConsultationFeature
-import RecordsFeature
+import ClaraUI
 import SwiftUI
-import TodayFeature
 
-/// Navegação principal: três abas, como no app original.
-/// Cada aba é uma feature independente, cada uma com a arquitetura que fez sentido.
 struct RootView: View {
     let environment: AppEnvironment
-
-    enum Tab: Hashable {
-        case today
-        case records
-        case consultation
-    }
-
-    @State private var selection: Tab = .today
+    @State private var storageWarning: AlertContent?
 
     var body: some View {
-        TabView(selection: $selection) {
-            // SwiftUI + MVVM-C
-            TodayCoordinatorView(coordinator: environment.todayCoordinator)
-                .tabItem { Label("Hoje", systemImage: "sun.max") }
-                .tag(Tab.today)
+        TabView {
+            TodayView(viewModel: environment.todayViewModel) {
+                PrivacyView(environment: environment)
+            }
+            .tabItem { Label("Hoje", systemImage: "sun.max") }
 
-            // UIKit (View Code) + VIP, embutido via UIViewControllerRepresentable
-            RecordsScreen(dependencies: environment.recordsDependencies)
-                .background(ClaraColor.background.ignoresSafeArea())
+            RecordsView(viewModel: environment.recordsViewModel)
                 .tabItem { Label("Registros", systemImage: "book.closed") }
-                .tag(Tab.records)
 
-            // SwiftUI + MVVM
             ConsultationView(viewModel: environment.consultationViewModel)
                 .tabItem { Label("Consulta", systemImage: "doc.text") }
-                .tag(Tab.consultation)
         }
         .tint(ClaraColor.lavenderDeep)
+        .onAppear { storageWarning = environment.storageWarning }
+        .claraAlert($storageWarning)
     }
 }

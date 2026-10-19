@@ -124,7 +124,7 @@ struct AnalyticsTests {
         #expect(buffer.events.map(\.name) == ["b", "c"])
     }
 
-    @Test("escritas concorrentes não perdem eventos (barrier do GCD)")
+    @Test("escritas concorrentes não perdem eventos")
     func concurrentWrites() async {
         let buffer = AnalyticsEventBuffer(capacity: 1_000)
         await withTaskGroup(of: Void.self) { group in

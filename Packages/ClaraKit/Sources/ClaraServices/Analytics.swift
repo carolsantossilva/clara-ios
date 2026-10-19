@@ -80,17 +80,22 @@ public struct BufferAnalyticsDestination: AnalyticsDestination {
     }
 }
 
-// MARK: - Buffer thread-safe com GCD
+// MARK: - Buffer thread-safe com lock
 
-/// Exemplo clássico de leitores/escritor com GCD: fila concorrente, leituras com
-/// `sync` em paralelo e escritas com `.barrier` (exclusivas).
+/// Guarda os últimos eventos, lidos e escritos de qualquer thread.
 ///
-/// `@unchecked Sendable` é uma promessa ao compilador de que a sincronização é
-/// manual. Com Swift Concurrency, o equivalente seria um `actor` — mas aí toda
-/// leitura viraria `await`, o que não serve para quem chama de código síncrono.
-public final class AnalyticsEventBuffer: @unchecked Sendable {
-    private let queue = DispatchQueue(label: "app.clara.analytics.buffer", attributes: .concurrent)
-    private var storage: [AnalyticsEvent] = []
+/// Por que não GCD (fila concorrente com `sync` nas leituras e `.barrier` nas
+/// escritas)? Era a versão anterior, e travava no CI: `sync` bloqueia a thread que
+/// chama. Chamado de dentro de uma Task, bloqueia uma thread do pool cooperativo do
+/// Swift Concurrency, que tem uma thread por núcleo. Com poucos núcleos, o GCD não
+/// criava thread nova para rodar a escrita e as leituras esperavam para sempre.
+///
+/// O lock só segura a thread pelo tempo de copiar um array, e o compilador confere
+/// a thread safety (`OSAllocatedUnfairLock` é Sendable), sem `@unchecked`.
+/// Com Swift Concurrency puro, o equivalente seria um `actor` — mas aí toda leitura
+/// viraria `await`, o que não serve para quem chama de código síncrono.
+public final class AnalyticsEventBuffer: Sendable {
+    private let storage = OSAllocatedUnfairLock(initialState: [AnalyticsEvent]())
     private let capacity: Int
 
     public init(capacity: Int = 50) {
@@ -98,16 +103,16 @@ public final class AnalyticsEventBuffer: @unchecked Sendable {
     }
 
     public func append(_ event: AnalyticsEvent) {
-        queue.async(flags: .barrier) {
-            self.storage.append(event)
-            if self.storage.count > self.capacity {
-                self.storage.removeFirst(self.storage.count - self.capacity)
+        storage.withLock { events in
+            events.append(event)
+            if events.count > capacity {
+                events.removeFirst(events.count - capacity)
             }
         }
     }
 
     public var events: [AnalyticsEvent] {
-        queue.sync { storage }
+        storage.withLock { $0 }
     }
 }
 
@@ -118,7 +123,7 @@ public final class AnalyticsEventBuffer: @unchecked Sendable {
 public final class AnalyticsService: AnalyticsTracker, Sendable {
     private let destinations: [AnyAnalyticsDestination]
     // O lock guarda o estado e é Sendable: o compilador confere a thread safety,
-    // sem precisar de @unchecked (compare com AnalyticsEventBuffer, acima).
+    // sem precisar de @unchecked (como no AnalyticsEventBuffer, acima).
     private let consent: OSAllocatedUnfairLock<Bool>
 
     public init(destinations: [AnyAnalyticsDestination], hasConsent: Bool) {

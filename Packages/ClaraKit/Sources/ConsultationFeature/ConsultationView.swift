@@ -45,9 +45,14 @@ public struct ConsultationView: View {
             DatePicker("Até", selection: $viewModel.endDate, in: viewModel.startDate..., displayedComponents: .date)
 
             SectionHeader(eyebrow: "2 · Selecione com calma", title: "O que quer incluir?") {
-                Button("Selecionar tudo", action: viewModel.selectAllEligible)
-                    .font(.footnote.weight(.bold))
-                    .tint(ClaraColor.lavenderDeep)
+                Button(action: viewModel.selectAllEligible) {
+                    // Área de toque mínima de 44 pt, mesmo sendo só texto.
+                    Text("Selecionar tudo")
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .font(.footnote.weight(.bold))
+                .tint(ClaraColor.lavenderDeep)
             }
             if viewModel.eligible.isEmpty {
                 Text("Não há registros nesse período — e nenhuma data em branco vira alerta.")
@@ -156,7 +161,7 @@ private struct ReportPreview: View {
                 .background(ClaraColor.lavender, in: RoundedRectangle(cornerRadius: 12))
             }
             Text("Este resumo reúne apenas o que escolhi registrar. Não explica causas nem substitui uma avaliação profissional.")
-                .font(.caption2)
+                .font(.caption)
                 .foregroundStyle(ClaraColor.muted)
 
             if let url = viewModel.exportedFileURL {

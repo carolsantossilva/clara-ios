@@ -21,8 +21,8 @@ public struct ReportDocument: Equatable, Sendable {
     public let questionsAndNotes: String
 }
 
-/// Monta o resumo para consulta. Função pura: mesma entrada, mesma saída —
-/// por isso é a parte mais fácil (e mais importante) de testar.
+/// Builds the summary for an appointment. A pure function: same input, same output,
+/// which makes it the easiest (and most important) part to test.
 public enum ReportBuilder {
     public static func build(_ selection: ReportSelection, from moments: [Moment]) -> ReportDocument {
         let entries = moments
@@ -41,7 +41,7 @@ public enum ReportBuilder {
         )
     }
 
-    /// Todos os registros dentro do período, independentemente da seleção.
+    /// Every record within the period, regardless of the selection.
     public static func eligible(start: LocalDay, end: LocalDay, in moments: [Moment]) -> [Moment] {
         let everything = ReportSelection(
             start: start,
@@ -56,8 +56,8 @@ public enum ReportBuilder {
 public enum ClaraFormat {
     public static let locale = Locale(identifier: "pt_BR")
 
-    /// `Date.FormatStyle` é um tipo de valor barato e com cache interno. Criar um
-    /// `DateFormatter` por célula/linha é um clássico problema de performance.
+    /// `Date.FormatStyle` is a cheap value type with an internal cache. Creating a
+    /// `DateFormatter` per cell/row is a classic performance problem.
     public static func dateTime(_ date: Date, in timeZone: TimeZone) -> String {
         date.formatted(Date.FormatStyle(date: .abbreviated, time: .shortened, locale: locale, timeZone: timeZone))
     }

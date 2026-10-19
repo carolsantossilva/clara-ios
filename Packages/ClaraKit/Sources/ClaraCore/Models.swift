@@ -1,11 +1,11 @@
 import Foundation
 
-// Os modelos são `struct`: tipos de valor, sem identidade compartilhada.
-// Copiar um FocusTask entre threads é seguro (Sendable de graça) e não exige
-// contagem de referências — o oposto de uma `class` mutável compartilhada.
+// Models are `struct`s: value types with no shared identity.
+// Copying a FocusTask across threads is safe (Sendable for free) and needs no
+// reference counting, the opposite of a shared mutable `class`.
 
-/// Uma tarefa que a usuária quer fazer.
-/// Chama `FocusTask` para não colidir com `Task` do Swift Concurrency.
+/// A task the user wants to do.
+/// Named `FocusTask` so it does not clash with Swift Concurrency's `Task`.
 public struct FocusTask: Identifiable, Codable, Hashable, Sendable {
     public enum State: String, Codable, Sendable {
         case open
@@ -42,7 +42,7 @@ public struct FocusTask: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-/// Uma ideia guardada em "Isso pode esperar", para tirar a distração da cabeça.
+/// An idea parked in "Isso pode esperar" (this can wait), to get the distraction out of her head.
 public struct ParkingNote: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var text: String
@@ -68,7 +68,7 @@ public struct ParkingNote: Identifiable, Codable, Hashable, Sendable {
     }
 }
 
-/// Como a usuária descreveu o momento. Sempre com rótulo, nunca nota numérica.
+/// How the user described the moment. Always a label, never a numeric score.
 public enum Mood: String, Codable, CaseIterable, Sendable {
     case good
     case okay
@@ -91,7 +91,7 @@ public enum Mood: String, Codable, CaseIterable, Sendable {
     }
 }
 
-/// Um check-in diário ou um momento avulso registrado pela usuária.
+/// A daily check-in or a one-off moment recorded by the user.
 public struct Moment: Identifiable, Codable, Hashable, Sendable {
     public enum Kind: String, Codable, Sendable {
         case daily
@@ -101,8 +101,8 @@ public struct Moment: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var kind: Kind
     public var occurredAt: Date
-    /// O fuso em que o momento aconteceu. O resumo mostra a hora local daquele dia,
-    /// mesmo que a usuária viaje depois.
+    /// The time zone where the moment happened. The summary shows that day's local time,
+    /// even if the user travels later.
     public var timeZoneIdentifier: String
     public var mood: Mood?
     public var note: String
@@ -146,13 +146,13 @@ public struct Moment: Identifiable, Codable, Hashable, Sendable {
         !note.isEmpty || !context.isEmpty || !helpedOrHindered.isEmpty
     }
 
-    /// Rótulo usado na lista e no resumo: o humor escolhido ou, sem ele, o tipo do registro.
+    /// Label used in the list and the summary: the chosen mood or, without one, the record kind.
     public var displayLabel: String {
         mood?.label ?? (kind == .daily ? "Check-in" : "Momento")
     }
 }
 
-/// O que está no formulário antes de virar um `Moment`.
+/// What is in the form before it becomes a `Moment`.
 public struct MomentDraft: Equatable, Sendable {
     public var kind: Moment.Kind
     public var occurredAt: Date
@@ -188,15 +188,15 @@ public struct MomentDraft: Equatable, Sendable {
         )
     }
 
-    /// Mesmo critério do app original: basta uma palavra escolhida OU qualquer texto.
+    /// Same rule as the original app: one chosen word OR any text is enough.
     public var hasContent: Bool {
         mood != nil || [note, context, helpedOrHindered].contains { !$0.trimmed.isEmpty }
     }
 }
 
 extension Moment {
-    /// Aplica um rascunho editado. Se a hora não mudou, preserva o fuso original;
-    /// se mudou, a nova hora foi escolhida no fuso atual do aparelho.
+    /// Applies an edited draft. If the time did not change, keeps the original time zone;
+    /// if it did, the new time was picked in the device's current time zone.
     public func applying(_ draft: MomentDraft, currentTimeZone: TimeZone) -> Moment {
         var updated = self
         updated.mood = draft.mood

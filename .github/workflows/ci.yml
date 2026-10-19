@@ -44,6 +44,9 @@ jobs:
   policy:
     name: Políticas (dependências, guardrails, supressões, testes)
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -52,14 +55,28 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # Em PR, compara com o estado atual da branch base, consultado na API: em PRs
+      # empilhados o SHA guardado no evento fica velho (base e PR são atualizados
+      # juntos) e github.base_ref aponta para a main, não para o PR de baixo.
+      - name: Descobrir a base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ -n "$PR_NUMBER" ]]; then
+            BASE_REF=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .base.ref)
+            echo "BASE=origin/$BASE_REF" >> "$GITHUB_ENV"
+          else
+            echo "BASE=$BEFORE" >> "$GITHUB_ENV"
+          fi
       - name: Verificar políticas
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          # Em PR, compara com o estado atual da branch base (não com o SHA guardado no
-          # evento): em PRs empilhados, base e PR costumam ser atualizados juntos.
-          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE"
+        run: |
+          echo "Comparando com $BASE"
+          python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE"
 
   secrets:
     name: Segredos (histórico inteiro)

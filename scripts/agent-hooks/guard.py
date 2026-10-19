@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
-"""Claude Code hooks for this repository.
+"""Coding agent hooks for this repository, shared by Claude Code and Codex.
 
-  guard.py edit   PreToolUse (Edit|Write|MultiEdit|NotebookEdit)
-                  - denies edits to guardrail files
-                  - asks a person to confirm edits that add suppressions (swiftlint:disable, try!, ...)
-  guard.py bash   PreToolUse (Bash)
-                  - denies commands that bypass the guardrails (--no-verify, force push,
-                    push to main, changing rulesets/labels through gh, writing to protected files)
-  guard.py stop   Stop
-                  - runs the policies and SwiftLint before the AI ends the task
+  guard.py edit [codex]   PreToolUse on file edits
+                          - denies edits to guardrail files
+                          - asks a person to confirm edits that add suppressions (swiftlint:disable, try!, ...)
+  guard.py bash [codex]   PreToolUse (Bash)
+                          - denies commands that bypass the guardrails (--no-verify, force push,
+                            push to main, changing rulesets/labels through gh, writing to protected files)
+  guard.py stop [codex]   Stop
+                          - runs the policies and SwiftLint before the agent ends the task
 
-A person unlocks guardrail edits by starting Claude Code with
-CLARA_GUARDRAILS_UNLOCK=1. The AI cannot set that variable: the hooks run in the
-Claude Code process environment, not in the Bash tool's shell.
+Configured in .claude/settings.json and .codex/hooks.json. Both harnesses send JSON on
+stdin and read the same answer format. Differences handled here:
+  - Codex edits files with apply_patch: the patch text comes in tool_input.command and
+    can touch several files.
+  - Codex cannot ask the person yet ("ask" is treated as a failed hook and the edit goes
+    through), so on Codex an "ask" becomes a "deny".
+
+A person unlocks guardrail edits by starting the agent with CLARA_GUARDRAILS_UNLOCK=1.
+The agent cannot set that variable: the hooks run in the agent's process environment,
+not in the shell it runs commands in.
 
 These hooks are the first barrier and use heuristics. The definitive barrier is CI
 with the main branch rules on GitHub.
@@ -27,8 +34,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR") or Path(__file__).resolve().parents[2])
+ROOT = Path(__file__).resolve().parents[2]
 UNLOCKED = os.environ.get("CLARA_GUARDRAILS_UNLOCK") == "1"
+CODEX = len(sys.argv) > 2 and sys.argv[2] == "codex"
 
 
 def read_list(name: str) -> list[str]:
@@ -55,6 +63,9 @@ def is_protected(path: str) -> bool:
 
 
 def decide(decision: str, reason: str) -> None:
+    if decision == "ask" and CODEX:
+        decision = "deny"
+        reason += " Codex cannot ask for confirmation, so the edit is denied: the person can make it."
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
@@ -68,38 +79,54 @@ def decide(decision: str, reason: str) -> None:
 # ---------------------------------------------------------------- edit
 
 
-def new_text(tool_input: dict) -> str:
-    parts = [tool_input.get("content", ""), tool_input.get("new_string", ""), tool_input.get("new_source", "")]
-    parts += [edit.get("new_string", "") for edit in tool_input.get("edits", []) or []]
-    return "\n".join(p for p in parts if p)
+PATCH_FILE = re.compile(r"^\*\*\* (?:(?:Add|Update|Delete) File|Move to): (.+)$")
 
 
-def old_text(tool_input: dict) -> str:
-    parts = [tool_input.get("old_string", "")]
-    parts += [edit.get("old_string", "") for edit in tool_input.get("edits", []) or []]
-    return "\n".join(p for p in parts if p)
+def patch_edits(patch: str) -> list[tuple[str, str, str]]:
+    """Splits a Codex apply_patch into (path, added text, removed text) per file."""
+    files: list[tuple[str, list[str], list[str]]] = []
+    for line in patch.splitlines():
+        match = PATCH_FILE.match(line)
+        if match:
+            files.append((match.group(1).strip(), [], []))
+        elif files and line.startswith("+"):
+            files[-1][1].append(line[1:])
+        elif files and line.startswith("-"):
+            files[-1][2].append(line[1:])
+    return [(path, "\n".join(added), "\n".join(removed)) for path, added, removed in files]
+
+
+def claude_edits(tool_input: dict) -> list[tuple[str, str, str]]:
+    path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
+    added = [tool_input.get("content", ""), tool_input.get("new_string", ""), tool_input.get("new_source", "")]
+    added += [edit.get("new_string", "") for edit in tool_input.get("edits", []) or []]
+    removed = [tool_input.get("old_string", "")]
+    removed += [edit.get("old_string", "") for edit in tool_input.get("edits", []) or []]
+    return [(path, "\n".join(p for p in added if p), "\n".join(p for p in removed if p))]
 
 
 def on_edit(payload: dict) -> None:
     tool_input = payload.get("tool_input", {})
-    path = tool_input.get("file_path") or tool_input.get("notebook_path") or ""
+    patch = tool_input.get("command", "")
+    edits = patch_edits(patch) if isinstance(patch, str) and patch else claude_edits(tool_input)
 
-    if path and is_protected(path) and not UNLOCKED:
-        decide("deny", (
-            f"{relative(path)} is part of the project's guardrails (guardrails/protected-paths.txt). "
-            "Do not change checks to make something pass: fix the code. If the rule is wrong, "
-            "explain why to the person and stop; she decides and unlocks the edit."
-        ))
+    for path, _, _ in edits:
+        if path and is_protected(path) and not UNLOCKED:
+            decide("deny", (
+                f"{relative(path)} is part of the project's guardrails (guardrails/protected-paths.txt). "
+                "Do not change checks to make something pass: fix the code. If the rule is wrong, "
+                "explain why to the person and stop; she decides and unlocks the edit."
+            ))
 
-    if not path.endswith((".swift", ".m", ".h")):
-        return
-    added, removed = new_text(tool_input), old_text(tool_input)
     found = []
-    for line in read_list("suppression-patterns.txt"):
-        regex, _, why = line.partition("\t")
-        pattern = re.compile(regex)
-        if len(pattern.findall(added)) > len(pattern.findall(removed)):
-            found.append(why.strip())
+    for path, added, removed in edits:
+        if not path.endswith((".swift", ".m", ".h")):
+            continue
+        for line in read_list("suppression-patterns.txt"):
+            regex, _, why = line.partition("\t")
+            pattern = re.compile(regex)
+            if len(pattern.findall(added)) > len(pattern.findall(removed)):
+                found.append(why.strip())
     if found:
         decide("ask", (
             "This edit adds suppressions: " + "; ".join(found) + ". "

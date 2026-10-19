@@ -1,0 +1,41 @@
+{
+  "description": "Guardrail hooks shared with Claude Code (scripts/agent-hooks/guard.py). Loaded only when the project is trusted.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^(apply_patch|Edit|Write)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/guard.py\" edit codex",
+            "timeout": 10,
+            "statusMessage": "Checking the edit against the guardrails"
+          }
+        ]
+      },
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/guard.py\" bash codex",
+            "timeout": 10,
+            "statusMessage": "Checking the command against the guardrails"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/guard.py\" stop codex",
+            "timeout": 300,
+            "statusMessage": "Running policies and SwiftLint"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -150,14 +150,25 @@ public struct LabeledTextField: View {
     let placeholder: String
     let isOptional: Bool
     let axis: Axis
+    let identifier: String?
     @Binding var text: String
 
-    public init(_ label: String, text: Binding<String>, placeholder: String, isOptional: Bool = true, axis: Axis = .horizontal) {
+    /// `identifier` vai no campo, não no container: assim testes de UI e Maestro
+    /// tocam no próprio TextField em vez de no rótulo.
+    public init(
+        _ label: String,
+        text: Binding<String>,
+        placeholder: String,
+        isOptional: Bool = true,
+        axis: Axis = .horizontal,
+        identifier: String? = nil
+    ) {
         self.label = label
         self._text = text
         self.placeholder = placeholder
         self.isOptional = isOptional
         self.axis = axis
+        self.identifier = identifier
     }
 
     public var body: some View {
@@ -172,6 +183,7 @@ public struct LabeledTextField: View {
                 .background(ClaraColor.paper, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(ClaraColor.line))
                 .accessibilityLabel(label)
+                .accessibilityIdentifier(identifier ?? "")
         }
     }
 }

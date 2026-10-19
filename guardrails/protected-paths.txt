@@ -16,4 +16,5 @@ scripts/ci/
 muter.conf.yml
 AGENTS.md
 CLAUDE.md
+REVIEW.md
 SECURITY.md

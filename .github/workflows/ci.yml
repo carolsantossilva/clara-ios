@@ -136,7 +136,7 @@ jobs:
         run: |
           set -o pipefail
           UDID=$(scripts/ci/simulator.sh)
-          # Avisos do compilador viram erro: código gerado por IA não entra com warning.
+          mkdir -p build
           xcodebuild test \
             -project Clara.xcodeproj -scheme Clara \
             -destination "id=$UDID" \
@@ -144,9 +144,10 @@ jobs:
             -resultBundlePath build/Testes.xcresult \
             -enableCodeCoverage YES \
             -skipMacroValidation \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO | tee build/xcodebuild.log
+      # Avisos do compilador viram erro: código gerado por IA não entra com warning.
+      - name: Sem avisos do compilador
+        run: scripts/ci/no_warnings.sh build/xcodebuild.log
       - name: Cobertura mínima
         run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -182,6 +183,7 @@ jobs:
         run: |
           set -o pipefail
           UDID=$("$GITHUB_WORKSPACE/scripts/ci/simulator.sh")
+          mkdir -p "$GITHUB_WORKSPACE/build"
           xcodebuild test \
             -scheme ClaraKit-Package \
             -destination "id=$UDID" \
@@ -189,9 +191,9 @@ jobs:
             -resultBundlePath "$GITHUB_WORKSPACE/build/Testes.xcresult" \
             -enableCodeCoverage YES \
             -skipMacroValidation \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO | tee "$GITHUB_WORKSPACE/build/xcodebuild.log"
+      - name: Sem avisos do compilador
+        run: scripts/ci/no_warnings.sh build/xcodebuild.log
       - name: Cobertura mínima
         run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

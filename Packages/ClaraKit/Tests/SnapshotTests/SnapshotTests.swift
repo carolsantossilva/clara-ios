@@ -42,7 +42,7 @@ struct SnapshotTests {
         let view = EmptyStateView()
             .padding()
             .background(ClaraColor.background)
-        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 220)))
+        assertSnapshot(of: view, as: .image(layout: .fixed(width: 390, height: 280)))
     }
 
     @Test func recordsScreenLight() {
@@ -57,10 +57,15 @@ struct SnapshotTests {
     }
 
     /// Dynamic Type no tamanho de acessibilidade: o layout não pode cortar texto.
+    /// Tela mais alta que o iPhone para a imagem incluir as células, não só o cabeçalho.
     @Test func recordsScreenAccessibilityText() {
         assertSnapshot(
             of: makeRecordsScreen(),
-            as: .image(on: .iPhone13, traits: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraLarge))
+            as: .image(
+                on: .iPhone13,
+                size: CGSize(width: 390, height: 2_400),
+                traits: UITraitCollection(preferredContentSizeCategory: .accessibilityExtraLarge)
+            )
         )
     }
 

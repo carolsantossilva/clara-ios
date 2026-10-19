@@ -64,7 +64,13 @@ public enum ClaraFont {
 
     /// Versão UIKit. Cria a fonte no tamanho base e escala com `UIFontMetrics`, para
     /// que `adjustsFontForContentSizeCategory` funcione também com fonte serifada.
-    public static func uiFont(_ style: UIFont.TextStyle, serif: Bool = false, weight: UIFont.Weight? = nil) -> UIFont {
+    /// `traits`: escala para o tamanho de texto dessa tela; sem ele, usa o do app.
+    public static func uiFont(
+        _ style: UIFont.TextStyle,
+        serif: Bool = false,
+        weight: UIFont.Weight? = nil,
+        compatibleWith traits: UITraitCollection? = nil
+    ) -> UIFont {
         let base = UITraitCollection(preferredContentSizeCategory: .large)
         var descriptor = UIFontDescriptor.preferredFontDescriptor(withTextStyle: style, compatibleWith: base)
         if serif, let serifDescriptor = descriptor.withDesign(.serif) {
@@ -73,7 +79,47 @@ public enum ClaraFont {
         if let weight {
             descriptor = descriptor.addingAttributes([.traits: [UIFontDescriptor.TraitKey.weight: weight]])
         }
-        return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: 0))
+        return UIFontMetrics(forTextStyle: style).scaledFont(for: UIFont(descriptor: descriptor, size: 0), compatibleWith: traits)
+    }
+}
+
+extension UIButton {
+    /// Fontes de um botão com `UIButton.Configuration` que acompanham o Dynamic Type.
+    ///
+    /// Botão com configuração não tem `adjustsFontForContentSizeCategory`, e o
+    /// transformer de atributos não enxerga as traits do botão. O update handler
+    /// enxerga: a fonte é refeita com o tamanho de texto da tela sempre que ele muda.
+    public func scalesConfigurationFonts(
+        title: UIFont.TextStyle,
+        titleWeight: UIFont.Weight? = nil,
+        subtitle: UIFont.TextStyle? = nil,
+        subtitleColor: UIColor? = nil
+    ) {
+        configurationUpdateHandler = { button in
+            guard var configuration = button.configuration else { return }
+            let titleFont = ClaraFont.uiFont(title, weight: titleWeight, compatibleWith: button.traitCollection)
+            // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
+            configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+                var updated = attributes
+                updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = titleFont
+                return updated
+            }
+            if let subtitle {
+                let subtitleFont = ClaraFont.uiFont(subtitle, compatibleWith: button.traitCollection)
+                configuration.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
+                    var updated = attributes
+                    updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = subtitleFont
+                    if let subtitleColor {
+                        updated[AttributeScopes.UIKitAttributes.ForegroundColorAttribute.self] = subtitleColor
+                    }
+                    return updated
+                }
+            }
+            button.configuration = configuration
+        }
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (button: UIButton, _: UITraitCollection) in
+            button.setNeedsUpdateConfiguration()
+        }
     }
 }
 

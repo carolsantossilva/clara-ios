@@ -23,6 +23,7 @@ final class RecordsHeaderView: UIView {
         eyebrow.text = "SEUS REGISTROS, DO SEU JEITO"
         eyebrow.font = ClaraFont.uiFont(.caption1, weight: .heavy)
         eyebrow.textColor = ClaraPalette.eyebrow
+        eyebrow.numberOfLines = 0
 
         let title = UILabel()
         title.text = "Como você tem estado?"
@@ -113,21 +114,9 @@ final class RecordsHeaderView: UIView {
         configuration.baseForegroundColor = ClaraPalette.ink
         configuration.cornerStyle = .large
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 14, bottom: 16, trailing: 14)
-        // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-            var updated = attributes
-            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.subheadline, weight: .bold)
-            return updated
-        }
-        configuration.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-            var updated = attributes
-            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.footnote)
-            updated[AttributeScopes.UIKitAttributes.ForegroundColorAttribute.self] = ClaraPalette.muted
-            return updated
-        }
-
         let button = UIButton(configuration: configuration, primaryAction: UIAction { _ in action() })
         button.contentHorizontalAlignment = .leading
+        button.scalesConfigurationFonts(title: .subheadline, titleWeight: .bold, subtitle: .footnote, subtitleColor: ClaraPalette.muted)
         button.accessibilityIdentifier = identifier
         return button
     }

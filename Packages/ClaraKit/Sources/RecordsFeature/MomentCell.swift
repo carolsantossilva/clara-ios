@@ -107,6 +107,8 @@ final class MomentCell: UITableViewCell {
         moodTagLabel.layer.cornerRadius = 10
         moodTagLabel.clipsToBounds = true
         moodTagLabel.setContentHuggingPriority(.required, for: .horizontal)
+        // A data quebra em várias linhas; a tag não pode ser espremida até sumir o texto.
+        moodTagLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
 
         dateLabel.font = ClaraFont.uiFont(.caption1)
         dateLabel.textColor = ClaraPalette.muted
@@ -147,13 +149,8 @@ final class MomentCell: UITableViewCell {
         configuration.title = title
         configuration.baseForegroundColor = ClaraPalette.lavenderDeep
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0)
-        // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
-        configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
-            var updated = attributes
-            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.footnote, weight: .bold)
-            return updated
-        }
         button.configuration = configuration
+        button.scalesConfigurationFonts(title: .footnote, titleWeight: .bold)
         button.addAction(UIAction { _ in action() }, for: .touchUpInside)
     }
 

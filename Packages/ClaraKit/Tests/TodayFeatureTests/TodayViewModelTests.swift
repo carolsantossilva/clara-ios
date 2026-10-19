@@ -21,7 +21,7 @@ struct TodayViewModelTests {
 
     func makeViewModel(
         tasks: (any TaskRepository)? = nil,
-        flags: FeatureFlags = FeatureFlags(),
+        flags: FeatureFlags? = nil,
         holidays: any HolidayProviding = StaticHolidayProvider()
     ) -> TodayViewModel {
         let viewModel = TodayViewModel(dependencies: TodayDependencies(
@@ -29,7 +29,7 @@ struct TodayViewModelTests {
             parking: LocalParkingRepository(database: database, now: now.read),
             suggester: StubStepSuggester(.succeed(["Abrir a conversa"])),
             holidays: holidays,
-            flags: flags,
+            flags: flags ?? FeatureFlags(),
             analytics: analytics,
             crashReporter: crashReporter,
             clock: ImmediateClock(),

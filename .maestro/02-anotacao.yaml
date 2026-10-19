@@ -17,4 +17,5 @@ tags: [smoke]
 - inputText: "Comprar pilhas"
 - tapOn:
     id: "parking.add"
-- assertVisible: "Comprar pilhas"
+# A linha é um botão: o Maestro lê o rótulo de acessibilidade, o mesmo que o VoiceOver.
+- assertVisible: "Concluir: Comprar pilhas"

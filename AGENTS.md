@@ -1,11 +1,6 @@
 # Instructions for AI agents
 
-This file applies to any coding agent (Claude Code, Codex, Copilot, Cursor...).
-`CLAUDE.md` imports this file.
-
-These instructions guide, but guarantee nothing on their own. The guarantee comes from the
-automated checks described in [docs/GUARDRAILS.md](docs/GUARDRAILS.md): hooks, CI and the rules on
-the `main` branch. Work with them, never against them.
+Hooks and CI enforce these rules ([docs/GUARDRAILS.md](docs/GUARDRAILS.md)). Never weaken them.
 
 ## The project
 
@@ -68,6 +63,12 @@ exists and is the original (look-alike names are an attack vector). A person add
 ## Git
 
 - Never commit to `main`; create a branch (`feat/…`, `fix/…`, `chore/…`).
-- Messages in the imperative mood, in English: `Add period filter to Consultation`.
+- Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+  `<type>(<optional scope>): <description>`, imperative mood, lowercase description.
+  - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
+  - Scopes: `today`, `records`, `consultation`, `app`, `core`, `storage`, `networking`,
+    `services`, `ai`, `design-system`, `guardrails`.
+  - Example: `feat(consultation): add period filter`. A breaking change adds `!` before the colon.
+  - Merges are squash-only, so the PR title becomes the commit on `main`; CI checks it.
 - Never use `--no-verify` or force push, and never touch labels, rulesets or GitHub settings.
 - Opening a PR is allowed; **merging is always human**.

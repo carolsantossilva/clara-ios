@@ -21,7 +21,7 @@ app came in through PRs, going through every barrier.
 | 1 | Instructions | `AGENTS.md`, `CLAUDE.md` | Architecture, product rules, how to work, what never to do | Guides |
 | 2 | Claude Code hooks | `.claude/settings.json`, `.claude/hooks/guard.py` | Deny edits to guardrails and commands that bypass checks; ask for confirmation on suppressions; run policies + SwiftLint before stopping | Blocks the local AI |
 | 3 | Git hooks | `scripts/git-hooks/pre-commit` | Secrets (gitleaks), policies, SwiftLint on committed files, no commits on `main` | Blocks any local commit |
-| 4 | CI | `.github/workflows/` | Policies, secrets in history, dependency review, lint, build with no compiler warnings, unit/snapshot/UI tests, minimum coverage, Maestro flows, CodeQL | Blocks the merge |
+| 4 | CI | `.github/workflows/` | Conventional Commits PR title, policies, secrets in history, dependency review, lint, build with no compiler warnings, unit/snapshot/UI tests, minimum coverage, Maestro flows, CodeQL | Blocks the merge |
 | 5 | GitHub | `main` rules, settings | Only PRs with a green "CI OK", no high CodeQL alert, no force push; secret scanning with push protection; Dependabot | Nobody bypasses by accident |
 | 6 | Monitoring | Scorecard, Mutation | Public best-practices score; weekly mutation testing on `ClaraCore` | Measures |
 

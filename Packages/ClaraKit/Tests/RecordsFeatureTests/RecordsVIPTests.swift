@@ -21,7 +21,7 @@ struct RecordsInteractorTests {
     }
 
     @Test("rascunho vazio não é salvo")
-    func emptyDraftNeedsContent() async {
+    func emptyDraftNeedsContent() async throws {
         let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()))
         let interactor = makeInteractor(repository: repository)
 

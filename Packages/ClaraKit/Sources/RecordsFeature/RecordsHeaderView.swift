@@ -21,7 +21,7 @@ final class RecordsHeaderView: UIView {
     private func setup() {
         let eyebrow = UILabel()
         eyebrow.text = "SEUS REGISTROS, DO SEU JEITO"
-        eyebrow.font = ClaraFont.uiFont(.caption2, weight: .heavy)
+        eyebrow.font = ClaraFont.uiFont(.caption1, weight: .heavy)
         eyebrow.textColor = ClaraPalette.eyebrow
 
         let title = UILabel()

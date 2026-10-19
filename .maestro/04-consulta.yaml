@@ -6,5 +6,15 @@ name: Consultation shows the summary preview
     arguments:
       "-ui-testing": true
 - tapOn: "Consulta"
-- assertVisible:
+- scrollUntilVisible:
+    element:
+      id: "consultation.preview"
+    direction: DOWN
+- tapOn:
     id: "consultation.preview"
+- scrollUntilVisible:
+    element:
+      id: "consultation.export"
+    direction: DOWN
+- assertVisible:
+    id: "consultation.export"

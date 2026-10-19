@@ -1,4 +1,4 @@
-import ClaraAI
+import ClaraInfrastructure
 
 // MARK: - AI
 

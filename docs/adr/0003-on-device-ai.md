@@ -22,4 +22,4 @@ Starting a task is the hard part for Clara's users. The original product proposa
 ## Consequences
 
 - On devices without Apple Intelligence the experience is simpler, but it never breaks.
-- Swapping or adding providers does not change the feature (Open/Closed + Dependency Inversion).
+- `StepSuggesting` lets the feature use both the on-device model and its fallback through the same interface.

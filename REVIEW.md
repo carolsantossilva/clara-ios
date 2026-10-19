@@ -28,10 +28,10 @@ Report at most five Nits per review.
 ## Always check
 
 - Every behavior change has a test, and the test would fail without the change.
-- A feature does not import another feature; concrete types are only wired in
+- A feature does not reference another feature's view model; concrete services are wired in
   `App/AppEnvironment.swift`.
-- The change follows the pattern of the feature it touches: Today is MVVM-C, Records is
-  VIP, Consultation is MVVM (`docs/adr/0002-architecture-per-feature.md`).
+- The change uses SwiftUI + MVVM: views own presentation state, and view models own
+  application state and operations (`docs/adr/0002-architecture-per-feature.md`).
 - AI suggestions keep a fallback and show where they came from.
 - New user-facing text is in Brazilian Portuguese; code, comments and docs are in English.
 - New interactive elements have an accessibility label, and text uses Dynamic Type styles.

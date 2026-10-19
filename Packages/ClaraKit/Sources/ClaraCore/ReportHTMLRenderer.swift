@@ -1,7 +1,7 @@
 import Foundation
 
-/// Gera o HTML imprimível do resumo (convertido em PDF pela feature de Consulta).
-/// Porta direta do `renderReportHtml` do app React Native.
+/// Builds the printable summary HTML (turned into a PDF by the Consultation feature).
+/// Direct port of the React Native app's `renderReportHtml`.
 public enum ReportHTMLRenderer {
     public static func render(_ document: ReportDocument, preparedAt: Date = .now) -> String {
         let entries = document.entries.map(renderEntry).joined()
@@ -64,7 +64,7 @@ public enum ReportHTMLRenderer {
         return html + "</article>"
     }
 
-    /// Texto da usuária nunca entra cru no HTML.
+    /// User text never goes into the HTML unescaped.
     static func escape(_ value: String) -> String {
         var escaped = ""
         escaped.reserveCapacity(value.count)

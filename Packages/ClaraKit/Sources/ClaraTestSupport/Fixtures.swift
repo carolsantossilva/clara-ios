@@ -8,7 +8,7 @@ public enum Fixtures {
 
     public static func date(_ iso: String) -> Date {
         guard let date = ISO8601DateFormatter().date(from: iso) else {
-            preconditionFailure("Data ISO inválida no teste: \(iso)")
+            preconditionFailure("Invalid ISO date in test: \(iso)")
         }
         return date
     }

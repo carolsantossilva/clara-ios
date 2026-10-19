@@ -6,12 +6,13 @@ tags: [smoke]
     clearState: true
     arguments:
       "-ui-testing": true
-# O campo fica abaixo da dobra; sem rolar, o toque cairia na tab bar.
+# O campo fica abaixo da dobra; sem rolar, o toque cairia na tab bar. Sem
+# centerElement: o campo está no fim da lista, então a rolagem para antes de
+# conseguir centralizá-lo e o passo falhava mesmo com o campo visível.
 - scrollUntilVisible:
     element:
       id: "parking.field"
     direction: DOWN
-    centerElement: true
 - tapOn:
     id: "parking.field"
 - inputText: "Comprar pilhas"

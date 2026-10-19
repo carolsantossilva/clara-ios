@@ -11,6 +11,9 @@ import XCTest
 /// Contra flakiness: localizar elementos por `accessibilityIdentifier` (não por
 /// texto que muda) e usar `waitForExistence` em vez de `sleep`.
 ///
+/// A auditoria registra cada problema como uma falha; `auditAccessibility` liga
+/// `continueAfterFailure` para o relatório trazer todos de uma vez, não só o primeiro.
+///
 /// `XCUIApplication` é isolado no main actor: cada teste é `@MainActor` e abre o
 /// próprio app (o padrão do template do Xcode), em vez de guardar o app no `setUp`.
 final class ClaraUITests: XCTestCase {
@@ -26,13 +29,19 @@ final class ClaraUITests: XCTestCase {
         return app
     }
 
+    @MainActor
+    private func auditAccessibility(_ app: XCUIApplication) throws {
+        continueAfterFailure = true
+        try app.performAccessibilityAudit()
+    }
+
     // MARK: Auditoria de acessibilidade
 
     @MainActor
     func testTodayPassesAccessibilityAudit() throws {
         let app = launchApp()
         XCTAssertTrue(app.buttons["today.addFirstTask"].waitForExistence(timeout: 2))
-        try app.performAccessibilityAudit()
+        try auditAccessibility(app)
     }
 
     /// Com um registro salvo, para a auditoria também cobrir a célula da linha do tempo.
@@ -47,7 +56,7 @@ final class ClaraUITests: XCTestCase {
         app.buttons["momentForm.save"].tap()
         XCTAssertTrue(app.cells["records.row"].firstMatch.waitForExistence(timeout: 2))
 
-        try app.performAccessibilityAudit()
+        try auditAccessibility(app)
     }
 
     @MainActor
@@ -55,7 +64,7 @@ final class ClaraUITests: XCTestCase {
         let app = launchApp()
         app.tabBars.buttons["Consulta"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["consultation.preview"].waitForExistence(timeout: 2))
-        try app.performAccessibilityAudit()
+        try auditAccessibility(app)
     }
 
     // MARK: Validação do formulário

@@ -3,7 +3,7 @@ import ClaraTestSupport
 import Foundation
 import os
 import Testing
-@testable import ClaraStorage
+@testable import ClaraInfrastructure
 
 @Suite("Local repositories")
 struct LocalRepositoriesTests {

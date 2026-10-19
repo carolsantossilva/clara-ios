@@ -6,13 +6,14 @@ Hooks and CI enforce these rules ([docs/GUARDRAILS.md](docs/GUARDRAILS.md)). Nev
 
 Clara is a native iOS app (Swift, iOS 17+) that helps pick a next step, park distractions and
 gather personal records for an appointment. The project is generated with XcodeGen
-(`project.yml`); the code lives in a local SPM package, `Packages/ClaraKit`, with one target per module.
+(`project.yml`); the code lives in the local SPM package `Packages/ClaraKit`.
 
-- `ClaraCore` depends on nothing. The features (`TodayFeature`, `RecordsFeature`,
-  `ConsultationFeature`) **never import each other**.
+- `ClaraCore` holds models and rules and depends on nothing. `ClaraInfrastructure` contains
+  storage, networking, local analytics and on-device AI. `ClaraUI` holds the three features
+  and their shared SwiftUI components. Features do not reference another feature's view model.
 - Concrete dependencies are only wired in the app (`App/AppEnvironment.swift`, the composition root).
-- Today = SwiftUI + MVVM-C · Records = UIKit View Code + VIP · Consultation = SwiftUI + MVVM.
-  Follow the pattern of the feature you are changing (see `docs/adr/0002`).
+- Every feature uses SwiftUI + MVVM. Views own sheets and confirmation dialogs; view models
+  own application state and operations (see `docs/adr/0002`).
 - Swift 6 toolchain, language mode 5 with strict concurrency: ViewModels are `@MainActor`,
   shared mutable state lives in an `actor`.
 - Code, comments, docs and commits are in English. **User-facing text is in Brazilian Portuguese.**

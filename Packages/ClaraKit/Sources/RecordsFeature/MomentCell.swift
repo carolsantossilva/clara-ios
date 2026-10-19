@@ -147,9 +147,10 @@ final class MomentCell: UITableViewCell {
         configuration.title = title
         configuration.baseForegroundColor = ClaraPalette.lavenderDeep
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0)
+        // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
-            updated.font = ClaraFont.uiFont(.footnote, weight: .bold)
+            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.footnote, weight: .bold)
             return updated
         }
         button.configuration = configuration

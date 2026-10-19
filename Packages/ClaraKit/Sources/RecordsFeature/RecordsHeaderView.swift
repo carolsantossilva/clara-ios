@@ -113,15 +113,16 @@ final class RecordsHeaderView: UIView {
         configuration.baseForegroundColor = ClaraPalette.ink
         configuration.cornerStyle = .large
         configuration.contentInsets = NSDirectionalEdgeInsets(top: 16, leading: 14, bottom: 16, trailing: 14)
+        // Atributo acessado pelo tipo: o key path de `updated.font` não é Sendable no transformer.
         configuration.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
-            updated.font = ClaraFont.uiFont(.subheadline, weight: .bold)
+            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.subheadline, weight: .bold)
             return updated
         }
         configuration.subtitleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attributes in
             var updated = attributes
-            updated.font = ClaraFont.uiFont(.footnote)
-            updated.foregroundColor = ClaraPalette.muted
+            updated[AttributeScopes.UIKitAttributes.FontAttribute.self] = ClaraFont.uiFont(.footnote)
+            updated[AttributeScopes.UIKitAttributes.ForegroundColorAttribute.self] = ClaraPalette.muted
             return updated
         }
 

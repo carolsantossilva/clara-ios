@@ -70,10 +70,6 @@ código da base e token de leitura. Ele busca os objetos Git da proposta sem che
 e consulta os labels atuais antes da avaliação. Build e testes continuam no evento
 `pull_request`, fora desse contexto. Referência: [orientação de segurança do GitHub](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
 
-**Ativação:** esse workflow só passa a rodar após ser incorporado à `main`; ele não
-protege retroativamente o próprio PR que o instala. O CI comum já pode usar o runner
-novo com o verificador antigo da base, sem executar o verificador proposto.
-
 **Limite:** o workflow comum e o nome `CI OK` ainda podem ser modificados num PR.
 Para tornar a avaliação independente uma barreira obrigatória contra workflows
 hostis, uma pessoa precisa configurar uma regra externa que exija o workflow

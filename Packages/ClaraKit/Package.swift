@@ -31,6 +31,7 @@ let package = Package(
         .testTarget(name: "ClaraAITests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
         .testTarget(name: "TodayFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
         .testTarget(name: "RecordsFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
+        .testTarget(name: "ConsultationFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )

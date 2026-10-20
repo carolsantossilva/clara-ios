@@ -1,0 +1,14 @@
+# Owner of the whole repository. Guardrail paths are listed separately to make
+# it explicit that any change to them goes through her.
+*                         @carolsantossilva
+
+/.github/                 @carolsantossilva
+/.claude/                 @carolsantossilva
+/guardrails/              @carolsantossilva
+/scripts/                 @carolsantossilva
+/.swiftlint.yml           @carolsantossilva
+/.gitleaks.toml           @carolsantossilva
+/muter.conf.yml           @carolsantossilva
+/AGENTS.md                @carolsantossilva
+/CLAUDE.md                @carolsantossilva
+/SECURITY.md              @carolsantossilva

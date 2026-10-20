@@ -19,9 +19,9 @@ app came in through PRs, going through every barrier.
 | # | Layer | Where | What it does | Strength |
 |---|---|---|---|---|
 | 1 | Instructions | `AGENTS.md`, `CLAUDE.md` | Architecture, product rules, how to work, what never to do | Guides |
-| 2 | Agent hooks (Claude Code, Codex) | `scripts/agent-hooks/guard.py`, wired in `.claude/settings.json` and `.codex/hooks.json` | Deny edits to guardrails and commands that bypass checks; ask for confirmation on suppressions (deny on Codex); run policies + SwiftLint before stopping | Blocks the local AI |
+| 2 | Claude Code hooks | `.claude/settings.json`, `.claude/hooks/guard.py` | Deny edits to guardrails and commands that bypass checks; ask for confirmation on suppressions; run policies + SwiftLint before stopping | Blocks the local AI |
 | 3 | Git hooks | `scripts/git-hooks/pre-commit` | Secrets (gitleaks), policies, SwiftLint on committed files, no commits on `main` | Blocks any local commit |
-| 4 | CI | `.github/workflows/` | Conventional Commits PR title, policies, secrets in history, dependency review, lint, build with no compiler warnings, unit/snapshot/UI tests, minimum coverage, Maestro flows, CodeQL | Blocks the merge |
+| 4 | CI | `.github/workflows/` | Policies, secrets in history, dependency review, lint, build with no compiler warnings, unit/snapshot/UI tests, minimum coverage, Maestro flows, CodeQL | Blocks the merge |
 | 5 | GitHub | `main` rules, settings | Only PRs with a green "CI OK", no high CodeQL alert, no force push; secret scanning with push protection; Dependabot | Nobody bypasses by accident |
 | 6 | Monitoring | Scorecard, Mutation | Public best-practices score; weekly mutation testing on `ClaraCore` | Measures |
 
@@ -53,20 +53,8 @@ brew install gitleaks swiftlint    # macOS
 ```
 
 - Work on a branch and open a PR. The merge is always yours.
-- To change a guardrail on purpose: edit it yourself, or start the agent with
-  `CLARA_GUARDRAILS_UNLOCK=1 claude` (or `CLARA_GUARDRAILS_UNLOCK=1 codex`). The PR will need
-  the `guardrails-change` label.
-
-### Using Codex
-
-Codex reads `AGENTS.md` directly and loads `.codex/hooks.json` only when the project is
-trusted: run `codex`, open `/hooks`, review and trust the three hooks. Differences from
-Claude Code:
-
-- Codex cannot ask for confirmation yet, so an edit that adds a suppression is denied
-  instead; make that edit yourself.
-- There is no `permissions.deny` for reading `.env` or keys; the git hook and CI still
-  catch secrets before they reach the repository.
+- To change a guardrail on purpose: edit it yourself, or start Claude Code with
+  `CLARA_GUARDRAILS_UNLOCK=1 claude`. The PR will need the `guardrails-change` label.
 
 ## Known limits (honesty)
 

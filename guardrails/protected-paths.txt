@@ -1,13 +1,12 @@
 # Paths that define the guardrails themselves.
 # - Claude Code hooks block the AI from editing these paths.
 # - In CI, a PR that touches them only passes with the "guardrails-change" label.
+# - CODEOWNERS assigns the repository owner to all of them.
 # A prefix ending in "/" covers the whole folder.
 .github/
 .claude/
-.codex/
 guardrails/
 scripts/guardrails/
-scripts/agent-hooks/
 scripts/git-hooks/
 scripts/ci/
 .swiftlint.yml
@@ -15,5 +14,4 @@ scripts/ci/
 muter.conf.yml
 AGENTS.md
 CLAUDE.md
-REVIEW.md
 SECURITY.md

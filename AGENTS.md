@@ -64,12 +64,6 @@ exists and is the original (look-alike names are an attack vector). A person add
 ## Git
 
 - Never commit to `main`; create a branch (`feat/…`, `fix/…`, `chore/…`).
-- Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
-  `<type>(<optional scope>): <description>`, imperative mood, lowercase description.
-  - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
-  - Scopes: `today`, `records`, `consultation`, `app`, `core`, `storage`, `networking`,
-    `services`, `ai`, `design-system`, `guardrails`.
-  - Example: `feat(consultation): add period filter`. A breaking change adds `!` before the colon.
-  - Merges are squash-only, so the PR title becomes the commit on `main`; CI checks it.
+- Messages in the imperative mood, in English: `Add period filter to Consultation`.
 - Never use `--no-verify` or force push, and never touch labels, rulesets or GitHub settings.
 - Opening a PR is allowed; **merging is always human**.

@@ -15,7 +15,7 @@ not scale to the volume of generated code.
 - **Layered deterministic checks:** Claude Code hooks → git hooks → CI → GitHub rules on `main`.
   Instructions in `AGENTS.md` guide, but they are not the guarantee.
 - **The guardrails protect themselves:** the AI does not edit guardrail files (hook), changes to
-  them require a human label (CI), and only a person merges.
+  them require a human label (CI) and go through the owner (CODEOWNERS).
 - **Explicit exceptions:** suppressions and test removals are not forbidden, but they require a
   recorded human decision (label + justification in the PR).
 - **Closed supply chain:** allow-list of dependencies, exact versions, actions pinned by SHA,

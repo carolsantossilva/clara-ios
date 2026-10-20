@@ -58,7 +58,9 @@ jobs:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+        run: |
+          if [[ "$MODE" == push ]]; then BASE_SHA=HEAD; fi
+          python3 scripts/ci/trusted_policy.py --mode "$MODE" --base "$BASE_SHA"
 
   secrets:
     name: Segredos (histórico inteiro)

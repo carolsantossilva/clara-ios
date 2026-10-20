@@ -87,6 +87,18 @@ class LivePolicyTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     gate.live_labels(event)
 
+    def test_trusted_event_passes_explicit_head_and_live_labels(self):
+        event = {"pull_request": {"number": 24, "head": {"sha": "proposal"},
+                                  "base": {"sha": "base"}}}
+        env = {"GITHUB_EVENT_NAME": "pull_request_target"}
+        with patch.dict(os.environ, env), patch.object(gate, "live_labels", return_value="[]"), \
+                patch.object(gate.subprocess, "run") as policy:
+            gate.run_policy(event)
+            self.assertEqual(policy.call_args.args[0],
+                             [gate.sys.executable, "scripts/ci/trusted_policy.py", "--head", "proposal",
+                              "--mode", "pr", "--base", "base"])
+            self.assertEqual(policy.call_args.kwargs["env"]["PR_LABELS"], "[]")
+
     def test_other_pr_cannot_supply_code_validation(self):
         run = dict(id=1, display_title="CI / opened / merge", event="pull_request",
                    workflow_id=7, head_sha="head", pull_requests=[{"number": 2}])
@@ -137,6 +149,7 @@ class GateIntegrationTests(unittest.TestCase):
                     gate.main()
                     self.assertEqual(policy.call_args.kwargs["env"]["PR_LABELS"], "[]")
                     self.assertTrue(policy.call_args.kwargs["check"])
+                    self.assertEqual(policy.call_args.args[0][1], "scripts/ci/trusted_policy.py")
                     self.assertEqual(policy.call_args.args[0][-4:], ["--mode", "pr", "--base", "base"])
         return calls
 

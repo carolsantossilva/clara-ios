@@ -97,20 +97,30 @@ def main():
         print(f"Reusing code validation: {code_run['html_url']}")
     else:
         require(needs.get("code-validation", {}).get("result") == "success", "Code validation did not pass")
-    # The early policy job is feedback only. Its event labels can become stale while
-    # macOS jobs are running. Every CI OK checks the current labels immediately last.
+    run_policy(event)
+
+
+def run_policy(event):
+    # Labels in the triggering event can be stale after a queued job starts.
     env = os.environ.copy()
+    is_pr = os.environ["GITHUB_EVENT_NAME"] in ("pull_request", "pull_request_target")
     if is_pr:
         env["PR_LABELS"] = live_labels(event)
-    base = event["pull_request"]["base"]["sha"] if is_pr else event["before"]
-    subprocess.run([sys.executable, "scripts/guardrails/policy_check.py", "--mode",
-                    "pr" if is_pr else "push", "--base", base], env=env, check=True)
+    # Main has already passed human review; pushes validate its current rules.
+    base = event["pull_request"]["base"]["sha"] if is_pr else "HEAD"
+    command = [sys.executable, "scripts/ci/trusted_policy.py"]
+    if os.environ["GITHUB_EVENT_NAME"] == "pull_request_target":
+        command += ["--head", event["pull_request"]["head"]["sha"]]
+    command += ["--mode", "pr" if is_pr else "push", "--base", base]
+    subprocess.run(command, env=env, check=True)
 
 
 if __name__ == "__main__":
     try:
         if sys.argv[1:] == ["code"]:
             check_code(json.loads(os.environ["NEEDS"]))
+        elif sys.argv[1:] == ["policy"]:
+            run_policy(json.loads(Path(os.environ["GITHUB_EVENT_PATH"]).read_text()))
         else:
             main()
     except (ValueError, KeyError) as error:

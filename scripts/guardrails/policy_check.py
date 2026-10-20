@@ -195,6 +195,31 @@ def check_protected(report: Report, diff: Diff, labels: set[str] | None) -> None
 # ---------------------------------------------------------------- regra 3
 
 
+def suppression_scan_text(text: str) -> str:
+    """Ignore leading comment prose while preserving directives and active code."""
+    if re.search(r"\b(swiftlint|swiftformat):", text):
+        return text
+    remaining = text.strip()
+    while remaining.startswith("/*"):
+        depth, position = 1, 2
+        while position < len(remaining) and depth:
+            token = remaining[position:position + 2]
+            if token == "/*":
+                depth += 1
+                position += 2
+            elif token == "*/":
+                depth -= 1
+                position += 2
+            else:
+                position += 1
+        if depth:
+            return ""
+        remaining = remaining[position:].lstrip()
+    if remaining.startswith(("//", "*")):
+        return ""
+    return remaining
+
+
 def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> None:
     patterns = []
     for line in read_list("guardrails/suppression-patterns.txt"):
@@ -206,8 +231,11 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
     for path, line_no, text in diff.added_lines:
         if not path.endswith((".swift", ".m", ".h")) or is_protected(path, prefixes):
             continue
+        # Comentário só conta se for uma diretiva (ex.: swiftlint:disable); citar
+        # `@unchecked Sendable` numa explicação não desliga nada.
+        scan_text = suppression_scan_text(text)
         for regex, why in patterns:
-            if regex.search(text):
+            if regex.search(scan_text):
                 hits.append((path, line_no, why, text.strip()))
 
     for path, line_no, why, text in hits:

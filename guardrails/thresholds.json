@@ -1,5 +1,7 @@
 {
   "_comment": "Mínimos do CI. Só sobem: começar perto do valor atual e aumentar aos poucos.",
   "min_line_coverage": 0.50,
-  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"]
+  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"],
+  "_comment_excluded_files": "Telas SwiftUI: testadas por snapshot e testes de UI, não por teste de unidade. Lógica (ViewModel, Coordinator, Router, Builder) continua contando.",
+  "coverage_excluded_files": ["TodayView.swift", "TodaySheets.swift", "ConsultationView.swift", "MomentFormView.swift"]
 }

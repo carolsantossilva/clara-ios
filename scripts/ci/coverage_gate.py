@@ -2,7 +2,7 @@
 """Falha se a cobertura de linhas dos módulos ficar abaixo do mínimo.
 
 Uso: coverage_gate.py <Resultado.xcresult>
-Lê o mínimo e os targets ignorados de guardrails/thresholds.json.
+Lê o mínimo, os targets e os arquivos ignorados de guardrails/thresholds.json.
 """
 import json
 import subprocess
@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 config = json.loads((ROOT / "guardrails/thresholds.json").read_text())
 minimum = config["min_line_coverage"]
 excluded = set(config.get("coverage_excluded_targets", []))
+excluded_files = set(config.get("coverage_excluded_files", []))
 
 report = json.loads(subprocess.run(
     ["xcrun", "xccov", "view", "--report", "--json", sys.argv[1]],
@@ -25,10 +26,15 @@ for target in report.get("targets", []):
     name = target["name"].removesuffix(".framework").removesuffix(".app").removesuffix(".o")
     if name.endswith(("Tests", "UITests")) or name in excluded:
         continue
-    covered += target["coveredLines"]
-    executable += target["executableLines"]
-    rows.append((name, target["lineCoverage"]))
+    files = [f for f in target.get("files", []) if f["name"] not in excluded_files]
+    target_covered = sum(f["coveredLines"] for f in files)
+    target_executable = sum(f["executableLines"] for f in files)
+    covered += target_covered
+    executable += target_executable
+    rows.append((name, target_covered / target_executable if target_executable else 0.0))
 
+if excluded_files:
+    print(f"Arquivos fora do cálculo: {', '.join(sorted(excluded_files))}")
 for name, value in sorted(rows):
     print(f"  {name:<28} {value:6.1%}")
 if executable == 0:

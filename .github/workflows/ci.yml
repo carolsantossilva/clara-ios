@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       app: ${{ steps.detect.outputs.app }}
+      package: ${{ steps.detect.outputs.package }}
       maestro: ${{ steps.detect.outputs.maestro }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -37,11 +38,15 @@ jobs:
       - id: detect
         run: |
           echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "package=$([[ -f Packages/ClaraKit/Package.swift ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   policy:
     name: Políticas (dependências, guardrails, supressões, testes)
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -50,12 +55,28 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      # Em PR, compara com o estado atual da branch base, consultado na API: em PRs
+      # empilhados o SHA guardado no evento fica velho (base e PR são atualizados
+      # juntos) e github.base_ref aponta para a main, não para o PR de baixo.
+      - name: Descobrir a base
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ -n "$PR_NUMBER" ]]; then
+            BASE_REF=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .base.ref)
+            echo "BASE=origin/$BASE_REF" >> "$GITHUB_ENV"
+          else
+            echo "BASE=$BEFORE" >> "$GITHUB_ENV"
+          fi
       - name: Verificar políticas
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+        run: |
+          echo "Comparando com $BASE"
+          python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE"
 
   secrets:
     name: Segredos (histórico inteiro)
@@ -90,7 +111,7 @@ jobs:
   lint:
     name: SwiftLint
     needs: detect
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -115,7 +136,7 @@ jobs:
         run: |
           set -o pipefail
           UDID=$(scripts/ci/simulator.sh)
-          # Avisos do compilador viram erro: código gerado por IA não entra com warning.
+          mkdir -p build
           xcodebuild test \
             -project Clara.xcodeproj -scheme Clara \
             -destination "id=$UDID" \
@@ -123,9 +144,10 @@ jobs:
             -resultBundlePath build/Testes.xcresult \
             -enableCodeCoverage YES \
             -skipMacroValidation \
-            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
-            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO | tee build/xcodebuild.log
+      # Avisos do compilador viram erro: código gerado por IA não entra com warning.
+      - name: Sem avisos do compilador
+        run: scripts/ci/no_warnings.sh build/xcodebuild.log
       - name: Cobertura mínima
         run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -133,6 +155,82 @@ jobs:
         with:
           name: resultado-dos-testes
           path: build/Testes.xcresult
+          retention-days: 7
+      # Snapshot sem referência (ou diferente) grava a imagem nova e falha.
+      # As imagens viram artefato para uma pessoa conferir e commitar.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: snapshots
+          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # Enquanto o app (project.yml) não existe, testa só o pacote. Permite PRs
+  # pequenos em pilha: cada módulo entra compilado e testado.
+  package:
+    name: Build e testes do pacote + cobertura
+    needs: [detect, lint]
+    if: needs.detect.outputs.package == 'true' && needs.detect.outputs.app != 'true'
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Vigia: build + testes levam uns 4 minutos. Se passar de 12, algum teste travou;
+      # antes de matar, grava a pilha de cada thread dos processos de teste (sample),
+      # para o log mostrar onde travou em vez de só "The operation was canceled".
+      - name: Testes
+        working-directory: Packages/ClaraKit
+        run: |
+          UDID=$("$GITHUB_WORKSPACE/scripts/ci/simulator.sh")
+          mkdir -p "$GITHUB_WORKSPACE/build"
+          (
+            set -o pipefail
+            xcodebuild test \
+              -scheme ClaraKit-Package \
+              -destination "id=$UDID" \
+              -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
+              -resultBundlePath "$GITHUB_WORKSPACE/build/Testes.xcresult" \
+              -enableCodeCoverage YES \
+              -skipMacroValidation \
+              CODE_SIGNING_ALLOWED=NO | tee "$GITHUB_WORKSPACE/build/xcodebuild.log"
+          ) &
+          tests=$!
+          for _ in $(seq 144); do
+            kill -0 "$tests" 2>/dev/null || break
+            sleep 5
+          done
+          if kill -0 "$tests" 2>/dev/null; then
+            echo "::error::Os testes não terminaram em 12 minutos. Pilhas dos processos de teste:"
+            for pid in $(pgrep -x xctest); do
+              sample "$pid" 3 -file "$GITHUB_WORKSPACE/build/sample-$pid.txt" >/dev/null 2>&1 || true
+              cat "$GITHUB_WORKSPACE/build/sample-$pid.txt" || true
+            done
+            pkill -x xcodebuild || true
+            exit 1
+          fi
+          wait "$tests"
+      - name: Sem avisos do compilador
+        run: scripts/ci/no_warnings.sh build/xcodebuild.log
+      - name: Cobertura mínima
+        run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: resultado-dos-testes-do-pacote
+          path: |
+            build/Testes.xcresult
+            build/sample-*.txt
+          if-no-files-found: ignore
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: snapshots-do-pacote
+          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
+          if-no-files-found: ignore
           retention-days: 7
 
   maestro:
@@ -159,6 +257,10 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
       - name: Rodar fluxos
+        env:
+          # O driver do iOS às vezes leva mais que os 15 s padrão para subir nos runners
+          # compartilhados ("iOS driver not ready in time"). Valor em milissegundos.
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
         run: |
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
@@ -174,7 +276,7 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
+    needs: [detect, policy, secrets, dependency-review, lint, test, package, maestro]
     runs-on: ubuntu-24.04
     steps:
       - name: Todos os jobs passaram ou foram pulados

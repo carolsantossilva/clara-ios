@@ -70,8 +70,14 @@ final class ClaraUITests: XCTestCase {
         let good = app.buttons["mood.good"]
         XCTAssertTrue(good.waitForExistence(timeout: 2))
         good.tap()
-        app.buttons["momentForm.save"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["records.row"].firstMatch.waitForExistence(timeout: 2))
+        let save = app.buttons["momentForm.save"]
+        save.tap()
+        // The saved row can exist behind the sheet while it is still dismissing.
+        // Audit the timeline only once the form is gone and the record is reachable.
+        XCTAssertTrue(save.waitForNonExistence(timeout: 5), "The record form must close before the audit")
+        let row = app.descendants(matching: .any)["records.row"].firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 2))
+        XCTAssertTrue(row.isHittable, "The saved record must be visible before the audit")
 
         try auditAccessibility(app)
     }

@@ -20,18 +20,36 @@ report = json.loads(subprocess.run(
     check=True, capture_output=True, text=True,
 ).stdout)
 
-covered = executable = 0
-rows = []
+# Static package code can be attributed to a test bundle instead of its library.
+# Classify our production files by path, independently of the binary that holds them.
+sources = ROOT / "Packages/ClaraKit/Sources"
+production = {}
 for target in report.get("targets", []):
-    name = target["name"].removesuffix(".framework").removesuffix(".app").removesuffix(".o")
-    if name.endswith(("Tests", "UITests")) or name in excluded:
-        continue
-    files = [f for f in target.get("files", []) if f["name"] not in excluded_files]
-    target_covered = sum(f["coveredLines"] for f in files)
-    target_executable = sum(f["executableLines"] for f in files)
-    covered += target_covered
-    executable += target_executable
-    rows.append((name, target_covered / target_executable if target_executable else 0.0))
+    for file in target.get("files", []):
+        path = Path(file["path"]).resolve()
+        if path.is_relative_to(ROOT / "App"):
+            module = "Clara"
+        elif path.is_relative_to(sources):
+            module = path.relative_to(sources).parts[0]
+        else:
+            continue  # Tests, generated code and external dependencies do not count.
+        if module in excluded or file["name"] in excluded_files:
+            continue
+        previous = production.get(path, (module, 0, 0))
+        # A static library may appear in several bundles. Count each source once;
+        # maxima retain a conservative coverage estimate without adding copies.
+        production[path] = (module, max(previous[1], file["coveredLines"]),
+                            max(previous[2], file["executableLines"]))
+
+modules = {}
+for module, file_covered, file_executable in production.values():
+    counts = modules.setdefault(module, [0, 0])
+    counts[0] += file_covered
+    counts[1] += file_executable
+covered = sum(counts[0] for counts in modules.values())
+executable = sum(counts[1] for counts in modules.values())
+rows = [(module, counts[0] / counts[1] if counts[1] else 0.0)
+        for module, counts in modules.items()]
 
 if excluded_files:
     print(f"Files left out: {', '.join(sorted(excluded_files))}")

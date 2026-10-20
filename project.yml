@@ -88,11 +88,6 @@ schemes:
     test:
       config: Debug
       gatherCoverageData: true
-      coverageTargets:
-        - Clara
-        - package: ClaraKit/ClaraCore
-        - package: ClaraKit/ClaraInfrastructure
-        - package: ClaraKit/ClaraUI
       targets:
         - ClaraUITests
         - package: ClaraKit/CoreTests

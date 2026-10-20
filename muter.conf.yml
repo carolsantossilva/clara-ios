@@ -1,4 +1,4 @@
-# Muter configuration (mutation testing). Used by .github/workflows/mutation.yml.
+# Configuração do Muter (teste de mutação). Usado por .github/workflows/mutation.yml.
 executable: /usr/bin/xcodebuild
 arguments:
   - test

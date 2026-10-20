@@ -1,4 +1,4 @@
-# Dependency updates arrive as PRs and go through CI like any other code.
+# Atualizações de dependências chegam como PRs e passam pelo CI como qualquer código.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -8,8 +8,8 @@ updates:
     groups:
       actions:
         patterns: ["*"]
-    labels: [dependencies]
-    # Waits until a version is 14 days old before proposing it (lowers the risk of a compromised release).
+    labels: [dependencias]
+    # Espera a versão ter 14 dias antes de propor (reduz risco de release comprometida).
     cooldown:
       default-days: 14
 
@@ -17,7 +17,7 @@ updates:
     directory: /Packages/ClaraKit
     schedule:
       interval: weekly
-    labels: [dependencies]
+    labels: [dependencias]
     cooldown:
       default-days: 14
 
@@ -25,6 +25,6 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    labels: [dependencies]
+    labels: [dependencias]
     cooldown:
       default-days: 14

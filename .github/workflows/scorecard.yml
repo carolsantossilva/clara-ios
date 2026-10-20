@@ -1,5 +1,5 @@
-# OpenSSF Scorecard: public score of the repository's security practices
-# (pinned actions, branch rules, code scanning, Dependabot, security policy...).
+# OpenSSF Scorecard: nota pública de boas práticas de segurança do repositório
+# (actions fixadas, regras de branch, code scanning, Dependabot, política de segurança...).
 name: Scorecard
 
 on:

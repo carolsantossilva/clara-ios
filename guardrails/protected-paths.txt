@@ -1,8 +1,8 @@
-# Paths that define the guardrails themselves.
-# - Claude Code hooks block the AI from editing these paths.
-# - In CI, a PR that touches them only passes with the "guardrails-change" label.
-# - CODEOWNERS assigns the repository owner to all of them.
-# A prefix ending in "/" covers the whole folder.
+# Caminhos que definem os próprios guardrails.
+# - Hooks do Claude Code bloqueiam edição desses caminhos pela IA.
+# - No CI, um PR que mexe neles só passa com o label "guardrails-change".
+# - O CODEOWNERS aponta a dona do repositório para todos eles.
+# Um prefixo terminado em "/" cobre a pasta inteira.
 .github/
 .claude/
 guardrails/

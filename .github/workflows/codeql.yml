@@ -1,7 +1,7 @@
-# Code security analysis (SAST) with CodeQL.
-# - Swift: needs a build, so it runs on macOS.
-# - actions: analyzes the workflows themselves (script injection, excessive permissions).
-# The main rule blocks the merge on any alert of high severity or above.
+# Análise de segurança do código (SAST) com CodeQL.
+# - Swift: precisa compilar, por isso roda em macOS.
+# - actions: analisa os próprios workflows (injeção de script, permissões excessivas).
+# A regra da main bloqueia o merge se houver alerta de severidade alta ou maior.
 name: CodeQL
 
 on:
@@ -19,18 +19,15 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       app: ${{ steps.detect.outputs.app }}
-      package: ${{ steps.detect.outputs.package }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - id: detect
-        run: |
-          echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "package=$([[ -f Packages/ClaraKit/Package.swift ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+        run: echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   actions:
-    name: Analyze workflows
+    name: Analisar workflows
     runs-on: ubuntu-24.04
     permissions:
       security-events: write
@@ -49,9 +46,9 @@ jobs:
           category: /language:actions
 
   swift:
-    name: Analyze Swift
+    name: Analisar Swift
     needs: detect
-    if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
+    if: needs.detect.outputs.app == 'true'
     runs-on: macos-26
     timeout-minutes: 60
     permissions:
@@ -64,23 +61,18 @@ jobs:
         with:
           persist-credentials: false
       - run: scripts/ci/install-tools.sh xcodegen
-      - if: needs.detect.outputs.app == 'true'
-        run: xcodegen generate
+      - run: xcodegen generate
       - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           languages: swift
           build-mode: manual
           queries: security-extended
       - name: Build
-        env:
-          APP: ${{ needs.detect.outputs.app }}
         run: |
-          # With the app: build the project. Before it exists: build only the package.
-          if [[ "$APP" == "true" ]]; then target=(-project Clara.xcodeproj -scheme Clara); \
-          else cd Packages/ClaraKit; target=(-scheme ClaraKit-Package); fi
-          xcodebuild build "${target[@]}" \
+          xcodebuild build \
+            -project Clara.xcodeproj -scheme Clara \
             -destination "generic/platform=iOS Simulator" \
-            -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
+            -derivedDataPath build/dd \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
       - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2

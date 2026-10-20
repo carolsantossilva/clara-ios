@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
-"""Claude Code hooks for this repository.
+"""Hooks do Claude Code para este repositório.
 
   guard.py edit   PreToolUse (Edit|Write|MultiEdit|NotebookEdit)
-                  - denies edits to guardrail files
-                  - asks a person to confirm edits that add suppressions (swiftlint:disable, try!, ...)
+                  - nega edição de arquivos de guardrail
+                  - pede confirmação humana ao adicionar supressões (swiftlint:disable, try!, ...)
   guard.py bash   PreToolUse (Bash)
-                  - denies commands that bypass the guardrails (--no-verify, force push,
-                    push to main, changing rulesets/labels through gh, writing to protected files)
+                  - nega comandos que contornam os guardrails (--no-verify, force push,
+                    push na main, mexer em rulesets/labels pelo gh, escrever em arquivos protegidos)
   guard.py stop   Stop
-                  - runs the policies and SwiftLint before the AI ends the task
+                  - roda as políticas e o SwiftLint antes de a IA encerrar a tarefa
 
-A person unlocks guardrail edits by starting Claude Code with
-CLARA_GUARDRAILS_UNLOCK=1. The AI cannot set that variable: the hooks run in the
-Claude Code process environment, not in the Bash tool's shell.
+Uma pessoa libera a edição dos guardrails iniciando o Claude Code com
+CLARA_GUARDRAILS_UNLOCK=1. A IA não consegue definir essa variável: os hooks rodam
+no ambiente do processo do Claude Code, não no shell da ferramenta Bash.
 
-These hooks are the first barrier and use heuristics. The definitive barrier is CI
-with the main branch rules on GitHub.
+Estes hooks são a primeira barreira e usam heurísticas. A barreira definitiva é o CI
+com as regras da branch main no GitHub.
 """
 from __future__ import annotations
 
@@ -86,9 +86,9 @@ def on_edit(payload: dict) -> None:
 
     if path and is_protected(path) and not UNLOCKED:
         decide("deny", (
-            f"{relative(path)} is part of the project's guardrails (guardrails/protected-paths.txt). "
-            "Do not change checks to make something pass: fix the code. If the rule is wrong, "
-            "explain why to the person and stop; she decides and unlocks the edit."
+            f"{relative(path)} faz parte dos guardrails do projeto (guardrails/protected-paths.txt). "
+            "Não altere verificações para fazer algo passar: corrija o código. Se a regra estiver "
+            "errada, explique o motivo à pessoa e pare; ela decide e libera a edição."
         ))
 
     if not path.endswith((".swift", ".m", ".h")):
@@ -102,9 +102,9 @@ def on_edit(payload: dict) -> None:
             found.append(why.strip())
     if found:
         decide("ask", (
-            "This edit adds suppressions: " + "; ".join(found) + ". "
-            "Prefer fixing the cause. If the suppression is needed, the person has to approve it, "
-            "and the PR will require the guardrail-exception label."
+            "Esta edição adiciona supressões: " + "; ".join(found) + ". "
+            "Prefira corrigir a causa. Se a supressão for necessária, a pessoa precisa aprovar, "
+            "e o PR vai exigir o label guardrail-exception."
         ))
 
 
@@ -112,19 +112,19 @@ def on_edit(payload: dict) -> None:
 
 
 BASH_RULES = [
-    (r"--no-verify\b|\bgit\s+commit\b[^|;&]*\s-n\b", "skipping git hooks (--no-verify) bypasses the secrets check"),
-    (r"\bgit\s+push\b[^|;&]*(\s-f\b|--force\b|--force-with-lease\b|\s\+\S)", "force push rewrites history"),
-    (r"\bgit\s+push\b[^|;&]*\s(\S+:)?(refs/heads/)?main\b", "direct push to main: all code goes through a PR"),
-    (r"\bgit\s+config\b[^|;&]*core\.hooksPath", "changing core.hooksPath turns off the git hooks"),
-    (r"\bgit\s+(update-ref|filter-branch|filter-repo|replace)\b", "rewriting refs or history"),
-    (r"\bgh\s+pr\s+merge\b[^|;&]*--admin", "merging with --admin ignores the branch rules"),
-    (r"\bgh\s+pr\s+merge\b", "merging is a human decision"),
-    (r"\bgh\s+pr\s+(edit|create)\b[^|;&]*--(add-)?label\b", "exception labels are a human decision"),
-    (r"\bgh\s+(label|secret|variable|ruleset|repo\s+edit|repo\s+delete|workflow\s+disable)\b", "repository settings are a human decision"),
-    (r"\bgh\s+api\b[^|;&]*(rulesets|protection|labels|/secrets|/variables|/hooks|security_and_analysis)", "repository settings are a human decision"),
-    (r"\bgh\s+api\b[^|;&]*(-X|--method)\s*(PUT|PATCH|DELETE)", "writing through the GitHub API is a human decision"),
-    (r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+(/|~|\$HOME)(\s|$)", "deleting the root or home folder"),
-    (r"(curl|wget)\b[^|;&]*\|\s*(ba|z)?sh\b", "downloading and running a script without checking it"),
+    (r"--no-verify\b|\bgit\s+commit\b[^|;&]*\s-n\b", "pular os hooks do git (--no-verify) contorna a verificação de segredos"),
+    (r"\bgit\s+push\b[^|;&]*(\s-f\b|--force\b|--force-with-lease\b|\s\+\S)", "force push reescreve histórico"),
+    (r"\bgit\s+push\b[^|;&]*\s(\S+:)?(refs/heads/)?main\b", "push direto na main: todo código entra por PR"),
+    (r"\bgit\s+config\b[^|;&]*core\.hooksPath", "mudar core.hooksPath desliga os hooks do git"),
+    (r"\bgit\s+(update-ref|filter-branch|filter-repo|replace)\b", "reescrever referências ou histórico"),
+    (r"\bgh\s+pr\s+merge\b[^|;&]*--admin", "merge com --admin ignora as regras da branch"),
+    (r"\bgh\s+pr\s+merge\b", "o merge é decisão humana"),
+    (r"\bgh\s+pr\s+(edit|create)\b[^|;&]*--(add-)?label\b", "labels de exceção são decisão humana"),
+    (r"\bgh\s+(label|secret|variable|ruleset|repo\s+edit|repo\s+delete|workflow\s+disable)\b", "configuração do repositório é decisão humana"),
+    (r"\bgh\s+api\b[^|;&]*(rulesets|protection|labels|/secrets|/variables|/hooks|security_and_analysis)", "configuração do repositório é decisão humana"),
+    (r"\bgh\s+api\b[^|;&]*(-X|--method)\s*(PUT|PATCH|DELETE)", "escrita na API do GitHub é decisão humana"),
+    (r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f?\s+(/|~|\$HOME)(\s|$)", "apagar a raiz ou a pasta pessoal"),
+    (r"(curl|wget)\b[^|;&]*\|\s*(ba|z)?sh\b", "baixar e executar script sem conferir"),
 ]
 
 WRITE_VERBS = re.compile(
@@ -137,9 +137,9 @@ def on_bash(payload: dict) -> None:
     command = payload.get("tool_input", {}).get("command", "")
     for regex, why in BASH_RULES:
         if re.search(regex, command):
-            if UNLOCKED and "human decision" in why:
+            if UNLOCKED and "decisão humana" in why:
                 continue
-            decide("deny", f"Command blocked by the guardrails: {why}.")
+            decide("deny", f"Comando bloqueado pelos guardrails: {why}.")
 
     if UNLOCKED:
         return
@@ -150,8 +150,8 @@ def on_bash(payload: dict) -> None:
         mention = has_verb and re.search(r"(^|[\s'\"/=])" + path, command)
         if redirect or mention:
             decide("deny", (
-                f"The command seems to write to {prefix}, which is part of the guardrails. "
-                "Do not change checks to make something pass: fix the code or ask the person."
+                f"O comando parece escrever em {prefix}, que faz parte dos guardrails. "
+                "Não altere verificações para fazer algo passar: corrija o código ou pergunte à pessoa."
             ))
 
 
@@ -160,7 +160,7 @@ def on_bash(payload: dict) -> None:
 
 def on_stop(payload: dict) -> None:
     if payload.get("stop_hook_active"):
-        sys.exit(0)  # already blocked once in this sequence; avoids a loop
+        sys.exit(0)  # já bloqueou uma vez nesta sequência; evita laço
     failures = []
 
     policy = subprocess.run(
@@ -168,7 +168,7 @@ def on_stop(payload: dict) -> None:
         cwd=ROOT, capture_output=True, text=True,
     )
     if policy.returncode != 0:
-        failures.append("Policies:\n" + policy.stderr.strip())
+        failures.append("Políticas:\n" + policy.stderr.strip())
 
     swiftlint = shutil.which("swiftlint")
     if swiftlint and (ROOT / ".swiftlint.yml").exists():
@@ -180,8 +180,8 @@ def on_stop(payload: dict) -> None:
     if failures:
         print(json.dumps({
             "decision": "block",
-            "reason": "The local checks failed. Fix them before stopping "
-                      "(without turning rules off):\n\n" + "\n\n".join(failures),
+            "reason": "As verificações locais falharam. Corrija antes de encerrar "
+                      "(sem desligar regras):\n\n" + "\n\n".join(failures),
         }))
     sys.exit(0)
 

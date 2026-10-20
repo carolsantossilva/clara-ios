@@ -14,27 +14,30 @@ SPEC.loader.exec_module(gate)
 
 
 class CodeResultsTests(unittest.TestCase):
-    def results(self, app="true", maestro="true", maestro_mode="smoke"):
+    def results(self, app="true", package="false", maestro="true", maestro_mode="smoke"):
         return {
             "detect": {"result": "success", "outputs": {
-                "app": app, "maestro": maestro, "maestro_mode": maestro_mode,
+                "app": app, "package": package, "maestro": maestro, "maestro_mode": maestro_mode,
             }},
-            "lint": {"result": "success" if app == "true" else "skipped"},
+            "lint": {"result": "success" if app == "true" or package == "true" else "skipped"},
             "test": {"result": "success" if app == "true" else "skipped"},
+            "package": {"result": "success" if package == "true" and app != "true" else "skipped"},
             "maestro": {"result": "success" if app == maestro == "true" and maestro_mode != "skip" else "skipped"},
         }
 
     def test_all_required_jobs_must_succeed(self):
         gate.check_code(self.results())
-        for job in ("detect", "lint", "test", "maestro"):
+        for job in ("detect", "lint", "test", "package", "maestro"):
             for result in ("failure", "cancelled", "skipped", "pending"):
                 with self.subTest(job=job, result=result), self.assertRaises(ValueError):
-                    needs = self.results()
+                    needs = self.results(app="false", package="true") if job == "package" else self.results()
                     needs[job]["result"] = result
                     gate.check_code(needs)
 
     def test_only_absent_app_or_flows_can_skip(self):
         gate.check_code(self.results(app="false"))
+        gate.check_code(self.results(app="false", package="true"))
+        gate.check_code(self.results(package="true"))
         gate.check_code(self.results(maestro="false"))
         gate.check_code(self.results(maestro_mode="skip"))
         with self.assertRaises(ValueError):
@@ -52,6 +55,10 @@ class CodeResultsTests(unittest.TestCase):
                 gate.check_code(needs)
         needs = self.results()
         del needs["detect"]["outputs"]["maestro_mode"]
+        with self.assertRaises(ValueError):
+            gate.check_code(needs)
+        needs = self.results()
+        del needs["detect"]["outputs"]["package"]
         with self.assertRaises(ValueError):
             gate.check_code(needs)
 

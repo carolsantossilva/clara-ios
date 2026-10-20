@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Falha se o log do xcodebuild tiver avisos do compilador no código do projeto.
+# Fails if the xcodebuild log has compiler warnings in the project's code.
 #
-# Substitui SWIFT_TREAT_WARNINGS_AS_ERRORS na linha de comando: essa opção vale
-# para todos os targets, inclusive dependências remotas, que o Xcode compila com
-# -suppress-warnings (as duas opções juntas são erro). Aqui só o nosso código conta.
-# Uso: no_warnings.sh <log-do-xcodebuild>
+# Replaces SWIFT_TREAT_WARNINGS_AS_ERRORS on the command line: that setting applies
+# to every target, remote dependencies included, which Xcode builds with
+# -suppress-warnings (the two together are an error). Here only our code counts.
+# Usage: no_warnings.sh <xcodebuild-log>
 set -euo pipefail
 
 log=$1
@@ -13,7 +13,7 @@ pattern="^${root}/(App|AppUITests|Packages/ClaraKit/(Sources|Tests))/[^:]+:[0-9]
 
 warnings=$(grep -E "$pattern" "$log" | sort -u || true)
 if [[ -z "$warnings" ]]; then
-  echo "Nenhum aviso do compilador no código do projeto."
+  echo "No compiler warnings in the project code."
   exit 0
 fi
 
@@ -24,5 +24,5 @@ while IFS= read -r line; do
   message=${line#*warning: }
   echo "::error file=${file#"$root"/},line=${lineno}::${message}"
 done <<< "$warnings"
-echo "$(wc -l <<< "$warnings" | tr -d ' ') aviso(s) do compilador. Código gerado por IA não entra com warning."
+echo "$(wc -l <<< "$warnings" | tr -d ' ') compiler warning(s). AI-generated code does not get in with warnings."
 exit 1

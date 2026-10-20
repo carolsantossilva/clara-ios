@@ -97,14 +97,28 @@ brew install gitleaks swiftlint    # macOS
 
 ### Using Codex
 
-Codex reads `AGENTS.md` directly and loads `.codex/hooks.json` only when the project is
-trusted: run `codex`, open `/hooks`, review and trust the three hooks. Differences from
-Claude Code:
+Codex reads `AGENTS.md` directly. Project-local hooks in `.codex/hooks.json` run only
+when the project is trusted, and non-managed hooks must be reviewed and trusted before
+they run. In Codex, run `codex`, open `/hooks`, then review and trust the three project
+hooks. Changed hook definitions require review again. See the official
+[Hooks documentation](https://developers.openai.com/codex/hooks).
 
-- Codex cannot ask for confirmation yet, so an edit that adds a suppression is denied
-  instead; make that edit yourself.
-- There is no `permissions.deny` for reading `.env` or keys; the git hook and CI still
-  catch secrets before they reach the repository.
+Differences from Claude Code:
+
+- A Codex `PreToolUse` hook can allow or deny a tool call, but cannot turn an arbitrary
+  tool call into an interactive confirmation prompt. The `ask` decision is not supported
+  there. Codex has a separate `PermissionRequest` hook for requests already awaiting
+  approval; it can allow, deny, or leave the normal prompt in place. This project uses
+  `PreToolUse` for edits, so edits that add suppressions are denied in Codex; make an
+  approved edit yourself.
+- Codex permission profiles can deny filesystem reads for paths or glob patterns. For
+  example, a profile can block `.env` files; see the official
+  [configuration reference](https://developers.openai.com/codex/config-reference/).
+  The repository's git hook and CI secret scans are separate checks: the pre-commit hook
+  scans staged content before a commit when installed and run, while CI scans repository
+  history after a push. Neither scan controls what Codex can read in the workspace, and
+  CI can report a secret only after it has reached the repository. GitHub secret scanning
+  and push protection are separate controls where enabled.
 
 ## Limites conhecidos (honestidade)
 

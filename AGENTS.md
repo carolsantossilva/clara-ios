@@ -1,71 +1,69 @@
-# Instruções para agentes de IA
+# Instructions for AI agents
 
-Este arquivo vale para qualquer agente de código (Claude Code, Codex, Copilot, Cursor...).
-O `CLAUDE.md` importa este arquivo.
+Hooks and CI enforce these rules ([docs/GUARDRAILS.md](docs/GUARDRAILS.md)). Never weaken them.
 
-Estas instruções orientam, mas não garantem nada sozinhas. O que garante são as verificações
-automáticas descritas em [docs/GUARDRAILS.md](docs/GUARDRAILS.md): hooks, CI e as regras da
-branch `main`. Trabalhe a favor delas, nunca contra.
+## The project
 
-## O projeto
+Clara is a native iOS app (Swift, iOS 17+) that helps pick a next step, park distractions and
+gather personal records for an appointment. The project is generated with XcodeGen
+(`project.yml`); the code lives in the local SPM package `Packages/ClaraKit`.
 
-Clara é um app iOS nativo (Swift, iOS 17+) que ajuda a escolher um próximo passo, guardar
-distrações e reunir registros pessoais para uma consulta. Projeto gerado com XcodeGen
-(`project.yml`); o código fica num pacote SPM local, `Packages/ClaraKit`, com um target por módulo.
+- `ClaraCore` holds models and rules and depends on nothing. `ClaraInfrastructure` contains
+  storage, networking, local analytics and on-device AI. `ClaraUI` holds the three features
+  and their shared SwiftUI components. Features do not reference another feature's view model.
+- Concrete dependencies are only wired in the app (`App/AppEnvironment.swift`, the composition root).
+- Every feature uses SwiftUI + MVVM. Views own sheets and confirmation dialogs; view models
+  own application state and operations (see `docs/adr/0002`).
+- Swift 6 toolchain, language mode 5 with strict concurrency: ViewModels are `@MainActor`,
+  shared mutable state lives in an `actor`.
+- Code, comments, docs and commits are in English. **User-facing text is in Brazilian Portuguese.**
 
-- `ClaraCore` não depende de nada. As features (`ClaraUI`) **nunca importam umas às outras**.
-- Dependências concretas só são montadas no app (`App/AppEnvironment.swift`, o composition root).
-- As três abas usam SwiftUI + MVVM.
-  Siga o padrão da feature que você está mexendo (ver `docs/adr/0002`).
-- Swift 6 toolchain, modo de linguagem 5 com concorrência estrita: ViewModels são `@MainActor`,
-  estado compartilhado mutável fica em `actor`.
+## Product rules (non-negotiable)
 
-## Regras do produto (não negociáveis)
+- User data stays **on the device only**. No backend, no cloud, no sending text she wrote.
+- Analytics is opt-in and only uses events from the catalog (`ClaraEvent`), **no free text**.
+- **No clinical interpretation** and no mood/sentiment analysis.
+- AI only on device (Foundation Models), always with a fallback and showing where the suggestion came from.
 
-- Dados da usuária ficam **só no aparelho**. Nada de backend, nuvem ou envio de texto escrito por ela.
-- Analytics é opt-in e só usa eventos do catálogo (`ClaraEvent`), **sem texto livre**.
-- **Nenhuma interpretação clínica** nem análise de humor/sentimento.
-- IA só no aparelho (Foundation Models), sempre com fallback e mostrando a origem da sugestão.
+## How to work
 
-## Como trabalhar
-
-1. **Teste primeiro.** Para mudança de comportamento, escreva o teste que falha, depois o código.
-   Use Swift Testing e os dublês de `ClaraTestSupport` (`ImmediateClock`, `SteppingNow`...).
-   Nada de `sleep`, rede real ou data/hora real em teste.
-2. **Mudanças pequenas.** Um PR = um assunto. Se a mudança cresceu, divida.
-3. **Rode as verificações antes de dizer que terminou** (o hook de Stop roda parte delas):
+1. **Test first.** For a behavior change, write the failing test, then the code.
+   Use Swift Testing and the doubles in `ClaraTestSupport` (`ImmediateClock`, `SteppingNow`...).
+   No `sleep`, real network or real date/time in tests.
+2. **Small changes.** One PR = one subject. If the change grew, split it.
+3. **Run the checks before saying you are done** (the Stop hook runs some of them):
    ```bash
    python3 scripts/guardrails/policy_check.py --mode local
    swiftlint lint --strict
    xcodegen generate && xcodebuild test -project Clara.xcodeproj -scheme Clara \
      -destination 'platform=iOS Simulator,name=iPhone 17' -skipMacroValidation
    ```
-4. **Nunca diga que algo funciona sem ter rodado.** Se não deu para compilar ou testar, diga isso
-   explicitamente.
+4. **Never say something works without running it.** If you could not build or test, say so
+   explicitly.
 
-## Quando uma verificação falha
+## When a check fails
 
-Corrija o código. **Não** enfraqueça a verificação. Isso inclui:
+Fix the code. Do **not** weaken the check. That includes:
 
-- apagar, desativar (`.disabled`, `XCTSkip`) ou afrouxar um teste;
-- regravar referência de snapshot para "aceitar" a mudança;
-- adicionar `swiftlint:disable`, `@unchecked Sendable`, `nonisolated(unsafe)`, `@preconcurrency` ou `try!`;
-- baixar o limite de cobertura ou mexer em qualquer arquivo listado em
+- deleting, disabling (`.disabled`, `XCTSkip`) or loosening a test;
+- re-recording a snapshot reference to "accept" the change;
+- adding `swiftlint:disable`, `@unchecked Sendable`, `nonisolated(unsafe)`, `@preconcurrency` or `try!`;
+- lowering the coverage threshold or touching any file listed in
   `guardrails/protected-paths.txt`.
 
-Se você acha que a regra está errada, **pare e explique à pessoa**. Ela decide. Os hooks bloqueiam
-essas edições e o CI recusa PRs com elas sem um label de exceção dado por uma pessoa.
+If you think the rule is wrong, **stop and explain it to the person**. She decides. The hooks block
+these edits and CI rejects PRs with them unless a person adds an exception label.
 
-## Dependências
+## Dependencies
 
-Não adicione dependência externa por conta própria. Se uma for realmente necessária, proponha:
-nome, URL, por que a biblioteca padrão não basta, mantenedor e última release. Confira que o
-pacote existe e é o original (nomes parecidos são um vetor de ataque). Uma pessoa adiciona em
-`guardrails/allowed-dependencies.txt`. Versões sempre exatas (`exact:`).
+Do not add an external dependency on your own. If one is really needed, propose it: name, URL,
+why the standard library is not enough, maintainer and latest release. Check that the package
+exists and is the original (look-alike names are an attack vector). A person adds it to
+`guardrails/allowed-dependencies.txt`. Versions are always exact (`exact:`).
 
 ## Git
 
-- Nunca commite na `main`; crie uma branch (`feat/…`, `fix/…`, `chore/…`).
+- Never commit to `main`; create a branch (`feat/…`, `fix/…`, `chore/…`).
 - Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
   `<type>(<optional scope>): <description>`, imperative mood, lowercase description.
   - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
@@ -73,8 +71,8 @@ pacote existe e é o original (nomes parecidos são um vetor de ataque). Uma pes
     `services`, `ai`, `design-system`, `guardrails`.
   - Example: `feat(consultation): add period filter`. A breaking change adds `!` before the colon.
   - Merges are squash-only, so the PR title becomes the commit on `main`; CI checks it.
-- Nunca use `--no-verify`, force push, nem mexa em labels, rulesets ou configurações do GitHub.
-- Abrir PR é permitido; **merge é sempre humano**.
+- Never use `--no-verify` or force push, and never touch labels, rulesets or GitHub settings.
+- Opening a PR is allowed; **merging is always human**.
 
 ## PR instructions
 

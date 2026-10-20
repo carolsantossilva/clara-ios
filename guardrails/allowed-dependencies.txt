@@ -1,6 +1,6 @@
-# Dependências externas permitidas. Uma por linha: <ecossistema> <identificador>.
-# Proteção contra "slopsquatting": a IA pode sugerir pacotes que não existem ou
-# que têm nome parecido com o original. Toda dependência nova precisa ser
-# conferida por uma pessoa e adicionada aqui (arquivo protegido).
+# Allowed external dependencies. One per line: <ecosystem> <identifier>.
+# Protection against "slopsquatting": the AI may suggest packages that do not
+# exist or whose name resembles the original. Every new dependency must be
+# checked by a person and added here (protected file).
 swift https://github.com/pointfreeco/swift-snapshot-testing
 gem fastlane

@@ -1,14 +1,14 @@
-# Política de segurança
+# Security policy
 
-## Como reportar uma vulnerabilidade
+## Reporting a vulnerability
 
-Use o **reporte privado de vulnerabilidades** do GitHub (aba *Security* → *Report a vulnerability*).
-Não abra issue pública para problemas de segurança.
+Use GitHub's **private vulnerability reporting** (*Security* tab → *Report a vulnerability*).
+Do not open a public issue for security problems.
 
-Resposta inicial em até 7 dias.
+First response within 7 days.
 
-## Escopo
+## Scope
 
-O Clara guarda todos os dados no aparelho (arquivo com `completeFileProtection`) e não tem backend.
-São relevantes, por exemplo: vazamento de dados para fora do aparelho, envio de texto da usuária
-em analytics ou logs, segredos no repositório e problemas na cadeia de dependências ou no CI.
+Clara keeps all data on the device (a file with `completeFileProtection`) and has no backend.
+Relevant issues include, for example: data leaking off the device, user text sent in analytics or
+logs, secrets in the repository, and problems in the dependency chain or in CI.

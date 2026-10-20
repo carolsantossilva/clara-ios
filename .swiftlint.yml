@@ -1,4 +1,4 @@
-# Regras de análise estática. Roda no build (script do Xcode) e no CI.
+# Static analysis rules. Runs in the build (Xcode script) and in CI.
 included:
   - App
   - AppUITests
@@ -18,7 +18,7 @@ opt_in_rules:
 
 disabled_rules:
   - todo
-  - trailing_comma # vírgula final em listas multilinha deixa os diffs menores
+  - trailing_comma # a trailing comma in multi-line lists keeps diffs smaller
 
 line_length:
   warning: 160
@@ -35,7 +35,7 @@ function_body_length:
 cyclomatic_complexity:
   ignores_case_statements: true
 
-# Os modelos VIP usam namespaces (Records.Load.Response).
+# The VIP models use namespaces (Records.Load.Response).
 nesting:
   type_level: 3
 
@@ -47,7 +47,7 @@ identifier_name:
 
 custom_rules:
   no_print:
-    name: "Sem print()"
+    name: "No print()"
     regex: "^\\s*print\\("
-    message: "Use os.Logger ou o CrashReporter em vez de print()."
+    message: "Use os.Logger or the CrashReporter instead of print()."
     severity: warning

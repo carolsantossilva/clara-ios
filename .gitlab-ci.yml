@@ -1,4 +1,4 @@
-# Equivalente ao GitHub Actions para GitLab CI (runner macOS com tag "macos").
+# GitLab CI equivalent of the GitHub Actions pipeline (macOS runner tagged "macos").
 stages: [lint, test, deploy]
 
 default:

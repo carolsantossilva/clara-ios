@@ -1,22 +1,22 @@
-# Automação de build, testes e distribuição.
-# Uso: bundle exec fastlane <lane>
+# Build, test and distribution automation.
+# Usage: bundle exec fastlane <lane>
 
 default_platform(:ios)
 
 SIMULATOR = ENV.fetch("CLARA_SIMULATOR", "iPhone 17")
 
 platform :ios do
-  desc "Gera o projeto a partir do project.yml"
+  desc "Generate the project from project.yml"
   lane :generate do
     sh("cd .. && xcodegen generate")
   end
 
-  desc "Análise estática com SwiftLint"
+  desc "Static analysis with SwiftLint"
   lane :lint do
     swiftlint(mode: :lint, strict: true, config_file: ".swiftlint.yml")
   end
 
-  desc "Testes unitários, de snapshot e de UI, com cobertura"
+  desc "Unit, snapshot and UI tests, with coverage"
   lane :test do
     generate
     run_tests(
@@ -26,15 +26,15 @@ platform :ios do
       code_coverage: true,
       result_bundle: true,
       output_types: "junit,html",
-      # Reexecuta só o que falhou: separa falha real de instabilidade do simulador.
+      # Retries only what failed: tells real failures from simulator flakiness.
       number_of_retries: 1
     )
   end
 
-  desc "Build assinado e envio para o TestFlight"
+  desc "Signed build and TestFlight upload"
   lane :beta do
-    # Precisa de credenciais: App Store Connect API key (variáveis APP_STORE_CONNECT_*)
-    # e certificados via match. Fica como referência do pipeline de CD.
+    # Needs credentials: an App Store Connect API key (APP_STORE_CONNECT_* variables)
+    # and certificates via match. Kept as a reference for the CD pipeline.
     generate
     api_key = app_store_connect_api_key(
       key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),

@@ -75,8 +75,9 @@ def ref_exists(ref: str) -> bool:
     ).returncode == 0
 
 
-def read_list(path: str) -> list[str]:
-    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
+def read_list(path: str, staged: bool = False) -> list[str]:
+    text = git("show", f":{path}") if staged else (ROOT / path).read_text(encoding="utf-8")
+    lines = text.splitlines()
     return [line for line in lines if line.strip() and not line.lstrip().startswith("#")]
 
 
@@ -134,21 +135,63 @@ def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
 # ---------------------------------------------------------------- regra 1
 
 
-SWIFT_PACKAGE = re.compile(r"\.package\(\s*url:\s*\"([^\"]+)\"\s*,\s*(\w+)\s*:")
+SWIFT_LITERAL = r'"[^"\\\r\n]+"'
+SWIFT_STRING = r'''(?P<hash>\#+)(?:"""[\s\S]*?"""|"[^\n]*?")(?P=hash)|"""[\s\S]*?"""|"(?:\\.|[^"\\])*"'''
+SWIFT_TOKEN = re.compile(r"//[^\n]*|/\*|" + SWIFT_STRING)
+SWIFT_PACKAGE = re.compile(SWIFT_STRING + r"|(?P<call>\.\s*package\s*\()")
+SWIFT_DECLARATION = re.compile(
+    r"\.\s*package\s*\(\s*(?:name\s*:\s*" + SWIFT_LITERAL + r"\s*,\s*)?"
+    r"(?:path\s*:\s*" + SWIFT_LITERAL + r"|url\s*:\s*"
+    r'"(?P<url>[^"\\\r\n]+)"\s*,\s*(?:exact|revision)\s*:\s*' + SWIFT_LITERAL + r")\s*\)"
+)
+
+
+def swift_without_comments(text: str) -> str:
+    """Mask comments without changing line numbers or touching string literals."""
+    position = 0
+    while match := SWIFT_TOKEN.search(text, position):
+        position = match.end()
+        if match.group().startswith("/*"):
+            depth = 1
+            while depth and (end := re.search(r"/\*|\*/", text[position:])):
+                depth += 1 if end.group() == "/*" else -1
+                position += end.end()
+            if depth:
+                position = len(text)
+        elif not match.group().startswith("//"):
+            continue
+        text = text[:match.start()] + re.sub(r"[^\n]", " ", text[match.start():position]) + text[position:]
+    return text
+
+
 GEM = re.compile(r"^\s*gem\s+[\"']([^\"']+)[\"']", re.MULTILINE)
 
 
-def check_dependencies(report: Report) -> None:
-    allowed = {tuple(line.split(None, 1)) for line in read_list("guardrails/allowed-dependencies.txt")}
-    tracked = git("ls-files", "--cached", "--others", "--exclude-standard").splitlines()
+def check_dependencies(report: Report, staged: bool = False) -> None:
+    allowed = {tuple(line.split(None, 1)) for line in read_list("guardrails/allowed-dependencies.txt", staged)}
+    tracked = git("ls-files", "--cached", *([] if staged else ["--others", "--exclude-standard"])).splitlines()
 
     for path in tracked:
         name = Path(path).name
+        if name not in ("Package.swift", "Gemfile"):
+            continue
+        text = git("show", f":{path}") if staged else (ROOT / path).read_text(encoding="utf-8")
         if name == "Package.swift":
-            text = (ROOT / path).read_text(encoding="utf-8")
+            text = swift_without_comments(text)
             for match in SWIFT_PACKAGE.finditer(text):
-                url, requirement = match.group(1).removesuffix(".git"), match.group(2)
+                if not match.group("call"):
+                    continue
                 line = text.count("\n", 0, match.start()) + 1
+                declaration = SWIFT_DECLARATION.match(text, match.start())
+                if not declaration:
+                    report.error(
+                        "Declaração Swift não reconhecida: use `.package(path: \"...\")` "
+                        "ou URL literal com versão literal `exact:`/`revision:`.", path, line,
+                    )
+                    continue
+                if not declaration.group("url"):
+                    continue
+                url = declaration.group("url").removesuffix(".git")
                 if ("swift", url) not in allowed:
                     report.error(
                         f"Dependência Swift fora da lista permitida: {url}. "
@@ -156,14 +199,7 @@ def check_dependencies(report: Report) -> None:
                         "adicioná-lo em guardrails/allowed-dependencies.txt.",
                         path, line,
                     )
-                if requirement not in ("exact", "revision"):
-                    report.error(
-                        f"Use versão exata para {url} (`exact:`), não `{requirement}:`. "
-                        "Assim nenhuma versão nova entra sem passar por PR (o Dependabot abre os PRs).",
-                        path, line,
-                    )
         elif name == "Gemfile":
-            text = (ROOT / path).read_text(encoding="utf-8")
             for match in GEM.finditer(text):
                 if ("gem", match.group(1)) not in allowed:
                     line = text.count("\n", 0, match.start()) + 1
@@ -310,7 +346,7 @@ def main() -> int:
         labels = set(json.loads(os.environ.get("PR_LABELS") or "[]"))
 
     report = Report()
-    check_dependencies(report)
+    check_dependencies(report, staged=args.mode == "staged")
     if args.mode != "push":
         local = args.mode in ("local", "staged")
         diff = collect_diff(base, local=local, staged=args.mode == "staged")

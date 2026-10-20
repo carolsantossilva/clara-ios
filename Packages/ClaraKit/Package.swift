@@ -27,14 +27,14 @@ let package = Package(
             dependencies: ["ClaraCore", "ClaraInfrastructure"],
             swiftSettings: swiftSettings
         ),
-        .testTarget(name: "ClaraCoreTests", dependencies: ["ClaraCore", "ClaraTestSupport"]),
-        .testTarget(name: "ClaraStorageTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
-        .testTarget(name: "ClaraNetworkingTests", dependencies: ["ClaraInfrastructure", "ClaraTestSupport"]),
-        .testTarget(name: "ClaraServicesTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
-        .testTarget(name: "ClaraAITests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
-        .testTarget(name: "TodayFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
-        .testTarget(name: "RecordsFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
-        .testTarget(name: "ConsultationFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
+        .testTarget(name: "CoreTests", dependencies: ["ClaraCore", "ClaraTestSupport"]),
+        .testTarget(name: "StorageTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
+        .testTarget(name: "NetworkingTests", dependencies: ["ClaraInfrastructure", "ClaraTestSupport"]),
+        .testTarget(name: "ServicesTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
+        .testTarget(name: "AITests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
+        .testTarget(name: "TodayTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
+        .testTarget(name: "RecordsTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
+        .testTarget(name: "ConsultationTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
         .testTarget(
             name: "SnapshotTests",
             dependencies: [

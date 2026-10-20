@@ -95,14 +95,14 @@ schemes:
         - package: ClaraKit/ClaraUI
       targets:
         - ClaraUITests
-        - package: ClaraKit/ClaraCoreTests
-        - package: ClaraKit/ClaraStorageTests
-        - package: ClaraKit/ClaraNetworkingTests
-        - package: ClaraKit/ClaraServicesTests
-        - package: ClaraKit/ClaraAITests
-        - package: ClaraKit/TodayFeatureTests
-        - package: ClaraKit/RecordsFeatureTests
-        - package: ClaraKit/ConsultationFeatureTests
+        - package: ClaraKit/CoreTests
+        - package: ClaraKit/StorageTests
+        - package: ClaraKit/NetworkingTests
+        - package: ClaraKit/ServicesTests
+        - package: ClaraKit/AITests
+        - package: ClaraKit/TodayTests
+        - package: ClaraKit/RecordsTests
+        - package: ClaraKit/ConsultationTests
         - package: ClaraKit/SnapshotTests
     profile:
       config: Release

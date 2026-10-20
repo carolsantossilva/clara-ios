@@ -32,6 +32,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from guardrail_rules import is_protected, read_list as read_rule_list
+
 ROOT = Path(__file__).resolve().parents[2]
 EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 LABEL_GUARDRAILS = "guardrails-change"
@@ -76,8 +78,7 @@ def ref_exists(ref: str) -> bool:
 
 
 def read_list(path: str) -> list[str]:
-    lines = (ROOT / path).read_text(encoding="utf-8").splitlines()
-    return [line for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    return read_rule_list(ROOT / path)
 
 
 # ---------------------------------------------------------------- diff
@@ -171,10 +172,6 @@ def check_dependencies(report: Report) -> None:
 
 
 # ---------------------------------------------------------------- regra 2
-
-
-def is_protected(path: str, prefixes: list[str]) -> bool:
-    return any(path == p or (p.endswith("/") and path.startswith(p)) for p in prefixes)
 
 
 def check_protected(report: Report, diff: Diff, labels: set[str] | None) -> None:

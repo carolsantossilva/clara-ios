@@ -35,16 +35,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "scripts/guardrails"))
+from guardrail_rules import is_protected as matches_protected_path, read_list as read_rule_list
+
 UNLOCKED = os.environ.get("CLARA_GUARDRAILS_UNLOCK") == "1"
 CODEX = len(sys.argv) > 2 and sys.argv[2] == "codex"
 
 
 def read_list(name: str) -> list[str]:
-    path = ROOT / "guardrails" / name
-    if not path.exists():
-        return []
-    lines = path.read_text(encoding="utf-8").splitlines()
-    return [line for line in lines if line.strip() and not line.lstrip().startswith("#")]
+    return read_rule_list(ROOT / "guardrails" / name, missing_ok=True)
 
 
 PROTECTED = [line.strip() for line in read_list("protected-paths.txt")]
@@ -58,8 +57,7 @@ def relative(path: str) -> str:
 
 
 def is_protected(path: str) -> bool:
-    rel = relative(path)
-    return any(rel == p or (p.endswith("/") and rel.startswith(p)) for p in PROTECTED)
+    return matches_protected_path(relative(path), PROTECTED)
 
 
 def decide(decision: str, reason: str) -> None:

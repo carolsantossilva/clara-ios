@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prints the UDID of an available iPhone on the newest installed iOS runtime.
+# Imprime o UDID de um iPhone disponível no runtime iOS mais novo instalado.
 set -euo pipefail
 xcrun simctl list devices available --json | python3 -c '
 import json, re, sys
@@ -11,5 +11,5 @@ for runtime in sorted((r for r in devices if ".iOS-" in r), key=version, reverse
     if phones:
         print(phones[0]["udid"])
         sys.exit(0)
-sys.exit("No iPhone simulator available")
+sys.exit("Nenhum simulador de iPhone disponível")
 '

@@ -1,10 +1,10 @@
-# Main pipeline. The main branch rule requires the "CI OK" job, which only passes
-# when every other job passed (or was skipped because it does not apply).
+# Pipeline principal. A regra da branch main exige o job "CI OK", que só passa
+# quando todos os outros passaram (ou foram pulados por não se aplicarem).
 #
-# Security of the pipeline itself:
-# - Actions pinned by commit SHA (a tag can be moved); Dependabot updates them.
-# - Read-only GITHUB_TOKEN; checkout without persisted credentials.
-# - Tools downloaded at a pinned version with a checksum (scripts/ci/install-tools.sh).
+# Segurança do próprio pipeline:
+# - Actions fixadas por SHA do commit (tag pode ser movida); o Dependabot atualiza.
+# - GITHUB_TOKEN só com leitura; checkout sem persistir credenciais.
+# - Ferramentas baixadas com versão fixa e checksum (scripts/ci/install-tools.sh).
 name: CI
 
 on:
@@ -25,11 +25,10 @@ env:
 
 jobs:
   detect:
-    name: Detect what exists
+    name: Detectar o que existe
     runs-on: ubuntu-24.04
     outputs:
       app: ${{ steps.detect.outputs.app }}
-      package: ${{ steps.detect.outputs.package }}
       maestro: ${{ steps.detect.outputs.maestro }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -38,15 +37,11 @@ jobs:
       - id: detect
         run: |
           echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "package=$([[ -f Packages/ClaraKit/Package.swift ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   policy:
-    name: Policies (dependencies, guardrails, suppressions, tests)
+    name: Políticas (dependências, guardrails, supressões, testes)
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      pull-requests: read
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
@@ -55,31 +50,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      # On a PR, compare with the current state of the base branch, looked up through
-      # the API: in stacked PRs the SHA stored in the event goes stale (base and PR are
-      # updated together) and github.base_ref points to main, not to the PR below.
-      - name: Find the base
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          BEFORE: ${{ github.event.before }}
-        run: |
-          if [[ -n "$PR_NUMBER" ]]; then
-            BASE_REF=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .base.ref)
-            echo "BASE=origin/$BASE_REF" >> "$GITHUB_ENV"
-          else
-            echo "BASE=$BEFORE" >> "$GITHUB_ENV"
-          fi
-      - name: Check policies
+      - name: Verificar políticas
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: |
-          echo "Comparing with $BASE"
-          python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE"
+        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
 
   secrets:
-    name: Secrets (full history)
+    name: Segredos (histórico inteiro)
     runs-on: ubuntu-24.04
     steps:
       - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -93,7 +72,7 @@ jobs:
       - run: gitleaks git --redact --no-banner --verbose .
 
   dependency-review:
-    name: Dependency review
+    name: Revisão de dependências
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-24.04
     steps:
@@ -111,7 +90,7 @@ jobs:
   lint:
     name: SwiftLint
     needs: detect
-    if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
+    if: needs.detect.outputs.app == 'true'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -121,7 +100,7 @@ jobs:
       - run: swiftlint lint --strict --reporter github-actions-logging
 
   test:
-    name: Build and tests (unit, snapshot, UI) + coverage
+    name: Build e testes (unitários, snapshot, UI) + cobertura
     needs: [detect, lint]
     if: needs.detect.outputs.app == 'true'
     runs-on: macos-26
@@ -132,109 +111,32 @@ jobs:
           persist-credentials: false
       - run: scripts/ci/install-tools.sh xcodegen swiftlint
       - run: xcodegen generate
-      - name: Tests
+      - name: Testes
         run: |
           set -o pipefail
           UDID=$(scripts/ci/simulator.sh)
-          mkdir -p build
+          # Avisos do compilador viram erro: código gerado por IA não entra com warning.
           xcodebuild test \
             -project Clara.xcodeproj -scheme Clara \
             -destination "id=$UDID" \
             -derivedDataPath build/dd \
-            -resultBundlePath build/Tests.xcresult \
+            -resultBundlePath build/Testes.xcresult \
             -enableCodeCoverage YES \
             -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO | tee build/xcodebuild.log
-      # Compiler warnings fail the build: AI-generated code does not get in with warnings.
-      - name: No compiler warnings
-        run: scripts/ci/no_warnings.sh build/xcodebuild.log
-      - name: Minimum coverage
-        run: python3 scripts/ci/coverage_gate.py build/Tests.xcresult
+            SWIFT_TREAT_WARNINGS_AS_ERRORS=YES \
+            GCC_TREAT_WARNINGS_AS_ERRORS=YES \
+            CODE_SIGNING_ALLOWED=NO
+      - name: Cobertura mínima
+        run: python3 scripts/ci/coverage_gate.py build/Testes.xcresult
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
-          name: test-results
-          path: build/Tests.xcresult
-          retention-days: 7
-      # A snapshot without a reference (or a different one) records the new image and fails.
-      # The images become an artifact for a person to check and commit.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: snapshots
-          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
-          if-no-files-found: ignore
-          retention-days: 7
-
-  # While the app (project.yml) does not exist, test only the package. Allows small
-  # stacked PRs: each module comes in built and tested.
-  package:
-    name: Package build and tests + coverage
-    needs: [detect, lint]
-    if: needs.detect.outputs.package == 'true' && needs.detect.outputs.app != 'true'
-    runs-on: macos-26
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      # Watchdog: build + tests take about 4 minutes. Past 12, a test is stuck; before
-      # killing it, record every thread stack of the test processes (sample), so the
-      # log shows where it hung instead of only "The operation was canceled".
-      - name: Tests
-        working-directory: Packages/ClaraKit
-        run: |
-          UDID=$("$GITHUB_WORKSPACE/scripts/ci/simulator.sh")
-          mkdir -p "$GITHUB_WORKSPACE/build"
-          (
-            set -o pipefail
-            xcodebuild test \
-              -scheme ClaraKit-Package \
-              -destination "id=$UDID" \
-              -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
-              -resultBundlePath "$GITHUB_WORKSPACE/build/Tests.xcresult" \
-              -enableCodeCoverage YES \
-              -skipMacroValidation \
-              CODE_SIGNING_ALLOWED=NO | tee "$GITHUB_WORKSPACE/build/xcodebuild.log"
-          ) &
-          tests=$!
-          for _ in $(seq 144); do
-            kill -0 "$tests" 2>/dev/null || break
-            sleep 5
-          done
-          if kill -0 "$tests" 2>/dev/null; then
-            echo "::error::Tests did not finish in 12 minutes. Stacks of the test processes:"
-            for pid in $(pgrep -x xctest); do
-              sample "$pid" 3 -file "$GITHUB_WORKSPACE/build/sample-$pid.txt" >/dev/null 2>&1 || true
-              cat "$GITHUB_WORKSPACE/build/sample-$pid.txt" || true
-            done
-            pkill -x xcodebuild || true
-            exit 1
-          fi
-          wait "$tests"
-      - name: No compiler warnings
-        run: scripts/ci/no_warnings.sh build/xcodebuild.log
-      - name: Minimum coverage
-        run: python3 scripts/ci/coverage_gate.py build/Tests.xcresult
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: package-test-results
-          path: |
-            build/Tests.xcresult
-            build/sample-*.txt
-          if-no-files-found: ignore
-          retention-days: 7
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        if: failure()
-        with:
-          name: package-snapshots
-          path: Packages/ClaraKit/Tests/SnapshotTests/__Snapshots__
-          if-no-files-found: ignore
+          name: resultado-dos-testes
+          path: build/Testes.xcresult
           retention-days: 7
 
   maestro:
-    name: End-to-end flows (Maestro)
+    name: Fluxos de ponta a ponta (Maestro)
     needs: [detect, lint]
     if: needs.detect.outputs.app == 'true' && needs.detect.outputs.maestro == 'true'
     runs-on: macos-26
@@ -245,7 +147,7 @@ jobs:
           persist-credentials: false
       - run: scripts/ci/install-tools.sh xcodegen maestro
       - run: xcodegen generate
-      - name: Build for the simulator
+      - name: Build para o simulador
         run: |
           set -o pipefail
           UDID=$(scripts/ci/simulator.sh)
@@ -256,7 +158,7 @@ jobs:
             -derivedDataPath build/dd \
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
-      - name: Run flows
+      - name: Rodar fluxos
         run: |
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
@@ -272,12 +174,12 @@ jobs:
   ci-ok:
     name: CI OK
     if: always()
-    needs: [detect, policy, secrets, dependency-review, lint, test, package, maestro]
+    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
     runs-on: ubuntu-24.04
     steps:
-      - name: Every job passed or was skipped
+      - name: Todos os jobs passaram ou foram pulados
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          echo "Results: $RESULTS"
+          echo "Resultados: $RESULTS"
           [[ "$RESULTS" != *failure* && "$RESULTS" != *cancelled* ]]

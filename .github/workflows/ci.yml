@@ -6,18 +6,24 @@
 # - GITHUB_TOKEN só com leitura; checkout sem persistir credenciais.
 # - Ferramentas baixadas com versão fixa e checksum (scripts/ci/install-tools.sh).
 name: CI
+# Record the exact merge SHA and activity for safe reuse on label events.
+run-name: CI / ${{ github.event.action || 'push' }} / ${{ github.sha }}
 
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Label edits must never cancel an in-progress code validation.
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && 'manual' || (github.event.action == 'labeled' || github.event.action == 'unlabeled') && 'labels' || 'code' }}
   cancel-in-progress: true
 
 env:
@@ -30,14 +36,24 @@ jobs:
     outputs:
       app: ${{ steps.detect.outputs.app }}
       maestro: ${{ steps.detect.outputs.maestro }}
+      maestro_mode: ${{ steps.detect.outputs.maestro_mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          mode=$(python3 scripts/ci/maestro_selection.py --event "$GITHUB_EVENT_NAME" --base "$BASE_SHA" --head "$GITHUB_SHA")
+          echo "maestro_mode=$mode" >> "$GITHUB_OUTPUT"
+          if compgen -G '.maestro/*.yaml' >/dev/null; then
+            echo "maestro=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "maestro=false" >> "$GITHUB_OUTPUT"
+          fi
 
   policy:
     name: Políticas (dependências, guardrails, supressões, testes)
@@ -55,7 +71,9 @@ jobs:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+        run: |
+          if [[ "$MODE" == push ]]; then BASE_SHA=HEAD; fi
+          python3 scripts/ci/trusted_policy.py --mode "$MODE" --base "$BASE_SHA"
 
   secrets:
     name: Segredos (histórico inteiro)
@@ -90,7 +108,7 @@ jobs:
   lint:
     name: SwiftLint
     needs: detect
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,7 +120,7 @@ jobs:
   test:
     name: Build e testes (unitários, snapshot, UI) + cobertura
     needs: [detect, lint]
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled'
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -138,7 +156,7 @@ jobs:
   maestro:
     name: Fluxos de ponta a ponta (Maestro)
     needs: [detect, lint]
-    if: needs.detect.outputs.app == 'true' && needs.detect.outputs.maestro == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled' && needs.detect.outputs.maestro == 'true' && needs.detect.outputs.maestro_mode != 'skip'
     runs-on: macos-26
     timeout-minutes: 40
     steps:
@@ -163,7 +181,13 @@ jobs:
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" build/dd/Build/Products/Debug-iphonesimulator/Clara.app
-          maestro --device "$UDID" test .maestro --format junit --output build/maestro.xml --test-output-dir build/maestro
+          if [[ "${{ needs.detect.outputs.maestro_mode }}" == smoke ]]; then
+            maestro --device "$UDID" test .maestro --exclude-tags=full --format junit --output build/maestro.xml --test-output-dir build/maestro
+          else
+            maestro --device "$UDID" test .maestro --format junit --output build/maestro.xml --test-output-dir build/maestro
+          fi
+      - name: Exigir ao menos um fluxo Maestro
+        run: python3 scripts/ci/maestro_result_gate.py build/maestro.xml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:
@@ -171,15 +195,41 @@ jobs:
           path: build/maestro
           retention-days: 7
 
+  code-validation:
+    name: Validação do código
+    if: always() && github.event.action != 'labeled' && github.event.action != 'unlabeled'
+    needs: [detect, lint, test, maestro]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exigir todos os testes aplicáveis
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/ci_gate.py code
+
   ci-ok:
     name: CI OK
     if: always()
-    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
+    needs: [detect, policy, secrets, dependency-review, code-validation]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     steps:
-      - name: Todos os jobs passaram ou foram pulados
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Testar a agregação do CI
+        run: python3 -B -m unittest discover -s scripts/ci/tests -v
+      - name: Exigir validação do código e políticas com labels atuais
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          echo "Resultados: $RESULTS"
-          [[ "$RESULTS" != *failure* && "$RESULTS" != *cancelled* ]]
+          NEEDS: ${{ toJSON(needs) }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/ci_gate.py

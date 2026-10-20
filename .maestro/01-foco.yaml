@@ -16,7 +16,11 @@ tags: [smoke]
     id: "addTask.save"
 - assertVisible:
     id: "today.focusTitle"
-    text: "Responder a clinica"
+- copyTextFrom:
+    id: "today.focusTitle"
+- assertTrue:
+    condition: ${maestro.copiedText == "Responder a clinica"}
+    label: The focus card keeps the saved title
 - tapOn:
     id: "today.startFocus"
 - assertVisible:

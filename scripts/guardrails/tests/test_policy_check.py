@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import sys
 import unittest
+from unittest.mock import patch
 
 MODULE_PATH = Path(os.environ.get('POLICY_CHECK_PATH', Path(__file__).parents[1] / 'policy_check.py'))
 spec = importlib.util.spec_from_file_location('policy_check', MODULE_PATH)
@@ -16,7 +17,9 @@ class SuppressionCommentTests(unittest.TestCase):
     def check_line(self, text, expected, labels=None):
         report = policy.Report()
         diff = policy.Diff(['Sources/Box.swift'], [], [('Sources/Box.swift', 1, text)])
-        policy.check_suppressions(report, diff, set() if labels is None else labels)
+        # Inspect reports without emitting annotations for intentional failing inputs.
+        with patch.object(policy, "IN_CI", False):
+            policy.check_suppressions(report, diff, set() if labels is None else labels)
         self.assertEqual(len(report.errors), expected, report.errors)
         return report
 

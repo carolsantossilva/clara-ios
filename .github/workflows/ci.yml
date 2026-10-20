@@ -68,6 +68,8 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Guardrail regression tests
+        run: python3 -B -m unittest discover -s scripts/guardrails/tests -v
       - name: Verificar políticas
         env:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}

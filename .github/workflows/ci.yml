@@ -257,6 +257,10 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO
       - name: Run flows
+        env:
+          # The iOS driver sometimes takes longer than the 15 s default to start on the
+          # shared runners ("iOS driver not ready in time"). Value in milliseconds.
+          MAESTRO_DRIVER_STARTUP_TIMEOUT: "120000"
         run: |
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b

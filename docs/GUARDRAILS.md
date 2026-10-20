@@ -21,7 +21,7 @@ commit tem só eles, e o app entrou por PR, passando por todas as barreiras.
 | 1 | Instruções | `AGENTS.md`, `CLAUDE.md` | Arquitetura, regras do produto, como trabalhar, o que nunca fazer | Orienta |
 | 2 | Hooks do Claude Code | `.claude/settings.json`, `.claude/hooks/guard.py` | Nega edição de guardrails e comandos que contornam checks; pede confirmação para supressões; roda políticas + SwiftLint antes de encerrar | Bloqueia a IA local |
 | 3 | Hooks do git | `scripts/git-hooks/pre-commit` | Segredos (gitleaks), políticas, SwiftLint nos arquivos do commit, sem commit na `main` | Bloqueia qualquer commit local |
-| 4 | CI | `.github/workflows/` | Políticas, segredos no histórico, revisão de dependências, lint, build com warnings como erro, testes unitários/snapshot/UI, cobertura mínima, fluxos Maestro, CodeQL | Bloqueia o merge |
+| 4 | CI | `.github/workflows/` | Conventional Commits PR title, políticas, segredos no histórico, revisão de dependências, lint, build com warnings como erro, testes unitários/snapshot/UI, cobertura mínima, fluxos Maestro, CodeQL | Bloqueia o merge |
 | 5 | GitHub | Regras da `main`, configurações | Só entra por PR com "CI OK" verde, sem alerta CodeQL alto, sem force push; secret scanning com push protection; Dependabot | Ninguém contorna sem querer |
 | 6 | Acompanhamento | Scorecard, Mutação | Nota pública de boas práticas; teste de mutação semanal no `ClaraCore` | Mede |
 

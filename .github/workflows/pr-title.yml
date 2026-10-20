@@ -1,0 +1,35 @@
+# Checks that the PR title follows Conventional Commits. Merges are squash-only and
+# the PR title becomes the commit on main, so the title is the one place to check.
+# Separate from ci.yml on purpose: it also runs when the title is edited, without
+# re-running the macOS jobs.
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  title:
+    name: Conventional Commits title
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      # The title goes through an environment variable, never straight into the script:
+      # interpolating ${{ }} inside run: would allow command injection.
+      - name: Check the title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|docs|test|refactor|perf|build|ci|chore|style|revert)(\([a-z0-9-]+\))?!?: [a-z0-9`].+$'
+          if [[ "$TITLE" =~ $pattern ]]; then
+            echo "OK: $TITLE"
+          else
+            echo "::error::PR title does not follow Conventional Commits: \"$TITLE\""
+            echo "Expected: <type>(<optional scope>): <lowercase description>, e.g. feat(today): add pause hint"
+            echo "Types: feat fix docs test refactor perf build ci chore style revert. See AGENTS.md."
+            exit 1
+          fi

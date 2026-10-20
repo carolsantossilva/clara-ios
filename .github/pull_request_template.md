@@ -1,25 +1,25 @@
-## What changes and why
+## O que muda e por quê
 
-<!-- One or two sentences. Link to an issue/ADR if there is one. -->
+<!-- Uma ou duas frases. Link para issue/ADR se houver. -->
 
-## How it was verified
+## Como foi verificado
 
-<!-- New/changed tests, manual steps, before/after screenshots for UI changes. -->
+<!-- Testes novos/alterados, passos manuais, prints de antes/depois para mudanças de UI. -->
 
-## Where the code came from
+## Origem do código
 
-- [ ] Written by a person
-- [ ] Generated or edited by AI (tool: ______ ) — and **I read the whole diff** before opening the PR
+- [ ] Escrito por pessoa
+- [ ] Gerado ou editado por IA (ferramenta: ______ ) — e **li o diff inteiro** antes de abrir o PR
 
 ## Checklist
 
-- [ ] Every behavior change has a test, and the test fails without the change
-- [ ] No test was removed, disabled or had its snapshot reference re-recorded without an explanation here
-- [ ] No new suppression (`swiftlint:disable`, `@unchecked Sendable`, `try!`...) — or it is justified below
-- [ ] No new dependency — or it was checked (exists, is the right package, maintained) and added to `guardrails/allowed-dependencies.txt`
-- [ ] Product rules kept: data on device only, analytics without user text, no clinical interpretation
-- [ ] Accessibility: VoiceOver and Dynamic Type checked on new screens
+- [ ] Toda mudança de comportamento tem teste, e o teste falha sem a mudança
+- [ ] Nenhum teste foi removido, desativado ou teve a referência de snapshot regravada sem explicação aqui
+- [ ] Nenhuma supressão nova (`swiftlint:disable`, `@unchecked Sendable`, `try!`...) — ou está justificada abaixo
+- [ ] Nenhuma dependência nova — ou foi conferida (existe, é o pacote certo, mantida) e adicionada em `guardrails/allowed-dependencies.txt`
+- [ ] Regras do produto mantidas: dados só no aparelho, analytics sem texto da usuária, nenhuma interpretação clínica
+- [ ] Acessibilidade: VoiceOver e Dynamic Type conferidos em telas novas
 
-## Exceptions
+## Exceções
 
-<!-- If the PR needs the guardrail-exception or guardrails-change labels, explain why here. -->
+<!-- Se o PR precisar dos labels guardrail-exception ou guardrails-change, explique aqui o motivo. -->

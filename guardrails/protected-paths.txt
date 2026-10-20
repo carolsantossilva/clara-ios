@@ -1,13 +1,11 @@
-# Paths that define the guardrails themselves.
-# - Claude Code hooks block the AI from editing these paths.
-# - In CI, a PR that touches them only passes with the "guardrails-change" label.
-# A prefix ending in "/" covers the whole folder.
+# Caminhos que definem os próprios guardrails.
+# - Hooks do Claude Code bloqueiam edição desses caminhos pela IA.
+# - No CI, um PR que mexe neles só passa com o label "guardrails-change".
+# Um prefixo terminado em "/" cobre a pasta inteira.
 .github/
 .claude/
-.codex/
 guardrails/
 scripts/guardrails/
-scripts/agent-hooks/
 scripts/git-hooks/
 scripts/ci/
 .swiftlint.yml

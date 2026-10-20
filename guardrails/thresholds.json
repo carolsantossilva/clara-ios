@@ -1,7 +1,5 @@
 {
-  "_comment": "CI minimums. They only go up: start near the current value and raise gradually.",
+  "_comment": "Mínimos do CI. Só sobem: começar perto do valor atual e aumentar aos poucos.",
   "min_line_coverage": 0.50,
-  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"],
-  "_comment_excluded_files": "SwiftUI screens: covered by snapshot and UI tests, not unit tests. Logic (view models, coordinators, routers, builders) still counts.",
-  "coverage_excluded_files": ["TodayView.swift", "TodaySheets.swift", "ConsultationView.swift", "MomentFormView.swift"]
+  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"]
 }

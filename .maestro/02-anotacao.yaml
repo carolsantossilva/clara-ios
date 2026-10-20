@@ -1,0 +1,22 @@
+appId: app.clara.ios
+name: Park a distraction for later
+tags: [smoke]
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+# The field is below the fold; without scrolling, the tap would land on the tab bar.
+# No centerElement: the field is at the end of the list, so scrolling stops before
+# it can be centered and the step failed even with the field on screen.
+- scrollUntilVisible:
+    element:
+      id: "parking.field"
+    direction: DOWN
+- tapOn:
+    id: "parking.field"
+- inputText: "Comprar pilhas"
+- tapOn:
+    id: "parking.add"
+# The row is a button: Maestro reads its accessibility label, the same one VoiceOver reads.
+- assertVisible: "Concluir: Comprar pilhas"

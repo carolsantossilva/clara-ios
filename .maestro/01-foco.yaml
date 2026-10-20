@@ -1,0 +1,27 @@
+appId: app.clara.ios
+name: Create the first task and start focusing
+tags: [smoke]
+---
+# -ui-testing: in-memory database and no network, so every flow starts from scratch.
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn:
+    id: "today.addFirstTask"
+- tapOn:
+    id: "addTask.title"
+- inputText: "Responder a clinica"
+- tapOn:
+    id: "addTask.save"
+- assertVisible:
+    id: "today.focusTitle"
+- copyTextFrom:
+    id: "today.focusTitle"
+- assertTrue:
+    condition: ${maestro.copiedText == "Responder a clinica"}
+    label: The focus card keeps the saved title
+- tapOn:
+    id: "today.startFocus"
+- assertVisible:
+    id: "today.timer"

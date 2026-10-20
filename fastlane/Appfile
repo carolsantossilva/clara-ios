@@ -1,0 +1,3 @@
+app_identifier("app.clara.ios")
+# apple_id("voce@exemplo.com")
+# team_id("XXXXXXXXXX")

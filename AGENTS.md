@@ -36,11 +36,12 @@ distrações e reunir registros pessoais para uma consulta. Projeto gerado com X
 2. **Mudanças pequenas.** Um PR = um assunto. Se a mudança cresceu, divida.
 3. **Rode as verificações antes de dizer que terminou** (o hook de Stop roda parte delas):
    ```bash
-   python3 scripts/guardrails/policy_check.py --mode local
-   swiftlint lint --strict
-   xcodegen generate && xcodebuild test -project Clara.xcodeproj -scheme Clara \
-     -destination 'platform=iOS Simulator,name=iPhone 17' -skipMacroValidation
+   ./scripts/validate.sh
    ```
+   O script roda os testes dos verificadores e as políticas locais. Quando existir app ou
+   pacote Swift, também exige SwiftLint e testes no simulador iOS em um Mac com Xcode.
+   O simulador é selecionado automaticamente; para escolher outro, use
+   `DESTINATION='platform=iOS Simulator,name=iPhone 17' ./scripts/validate.sh`.
 4. **Nunca diga que algo funciona sem ter rodado.** Se não deu para compilar ou testar, diga isso
    explicitamente.
 

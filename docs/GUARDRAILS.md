@@ -36,6 +36,14 @@ commit tem só eles, e o app entrou por PR, passando por todas as barreiras.
 
 Labels são decisão humana: os hooks impedem a IA de adicioná-los.
 
+Ao adicionar ou remover labels, o CI reavalia as políticas com os labels atuais sem
+repetir os jobs macOS. O "CI OK" exige a validação do código de uma execução do mesmo
+workflow, PR e commit de merge; resultados falhos, cancelados ou ainda pendentes não
+servem. Labels não cancelam a execução de código em andamento. Se não houver validação
+válida, reexecute a execução de código (opened/synchronize/reopened), ou aguarde seu
+fim e reexecute o CI do label. Antes de aprovar o resultado, toda execução consulta
+novamente os labels atuais para evitar aceitar uma exceção removida durante os testes.
+
 ### Cadeia de suprimentos
 
 - Actions fixadas pelo SHA do commit (uma tag pode ser movida para código malicioso).

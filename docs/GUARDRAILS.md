@@ -36,6 +36,37 @@ commit tem só eles, e o app entrou por PR, passando por todas as barreiras.
 
 Labels são decisão humana: os hooks impedem a IA de adicioná-los.
 
+Ao adicionar ou remover labels, o CI reavalia as políticas com os labels atuais sem
+repetir os jobs macOS. O "CI OK" exige a validação do código de uma execução do mesmo
+workflow, PR e commit de merge; resultados falhos, cancelados ou ainda pendentes não
+servem. Labels não cancelam a execução de código em andamento. Se não houver validação
+válida, reexecute a execução de código (opened/synchronize/reopened), ou aguarde seu
+fim e reexecute o CI do label. Antes de aprovar o resultado, toda execução consulta
+novamente os labels atuais para evitar aceitar uma exceção removida durante os testes.
+
+### Origem confiável das políticas
+
+O CI executa o verificador Python e lê as listas de regras da revisão base, nunca da
+proposta. Os manifests e o diff da proposta são lidos como dados do Git, sem checkout,
+build ou import dos arquivos propostos na avaliação de políticas. Esvaziar a lista de
+proteção ou substituir o verificador no PR não muda a decisão dessa avaliação.
+
+Isso também vale para a lista de dependências: uma nova biblioteca exige primeiro um
+PR humano que aprove a lista e seja incorporado à base; só depois o PR que a utiliza.
+O label `guardrails-change` autoriza a mudança protegida, mas não libera dependências
+que ainda estejam fora da lista da base.
+
+O workflow `trusted-policy.yml`, disparado por `pull_request_target`, usa somente o
+código da base e token de leitura. Ele busca os objetos Git da proposta sem checkout
+e consulta os labels atuais antes da avaliação. Build e testes continuam no evento
+`pull_request`, fora desse contexto. Referência: [orientação de segurança do GitHub](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
+
+**Limite:** o workflow comum e o nome `CI OK` ainda podem ser modificados num PR.
+Para tornar a avaliação independente uma barreira obrigatória contra workflows
+hostis, uma pessoa precisa configurar uma regra externa que exija o workflow
+confiável. Um check obrigatório apenas pelo nome não garante sua origem. Esta
+mudança não altera rulesets, labels ou configurações do GitHub.
+
 ### Cadeia de suprimentos
 
 - Actions fixadas pelo SHA do commit (uma tag pode ser movida para código malicioso).

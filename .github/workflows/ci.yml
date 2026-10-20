@@ -6,6 +6,8 @@
 # - GITHUB_TOKEN só com leitura; checkout sem persistir credenciais.
 # - Ferramentas baixadas com versão fixa e checksum (scripts/ci/install-tools.sh).
 name: CI
+# Record the exact merge SHA and activity for safe reuse on label events.
+run-name: CI / ${{ github.event.action || 'push' }} / ${{ github.sha }}
 
 on:
   pull_request:
@@ -17,7 +19,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
+  # Label edits must never cancel an in-progress code validation.
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' || github.event.action == 'unlabeled') && 'labels' || 'code' }}
   cancel-in-progress: true
 
 env:
@@ -55,7 +58,9 @@ jobs:
           PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           MODE: ${{ github.event_name == 'pull_request' && 'pr' || 'push' }}
-        run: python3 scripts/guardrails/policy_check.py --mode "$MODE" --base "$BASE_SHA"
+        run: |
+          if [[ "$MODE" == push ]]; then BASE_SHA=HEAD; fi
+          python3 scripts/ci/trusted_policy.py --mode "$MODE" --base "$BASE_SHA"
 
   secrets:
     name: Segredos (histórico inteiro)
@@ -90,7 +95,7 @@ jobs:
   lint:
     name: SwiftLint
     needs: detect
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled'
     runs-on: macos-26
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -102,7 +107,7 @@ jobs:
   test:
     name: Build e testes (unitários, snapshot, UI) + cobertura
     needs: [detect, lint]
-    if: needs.detect.outputs.app == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled'
     runs-on: macos-26
     timeout-minutes: 45
     steps:
@@ -138,7 +143,7 @@ jobs:
   maestro:
     name: Fluxos de ponta a ponta (Maestro)
     needs: [detect, lint]
-    if: needs.detect.outputs.app == 'true' && needs.detect.outputs.maestro == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled' && needs.detect.outputs.maestro == 'true'
     runs-on: macos-26
     timeout-minutes: 40
     steps:
@@ -171,15 +176,41 @@ jobs:
           path: build/maestro
           retention-days: 7
 
+  code-validation:
+    name: Validação do código
+    if: always() && github.event.action != 'labeled' && github.event.action != 'unlabeled'
+    needs: [detect, lint, test, maestro]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Exigir todos os testes aplicáveis
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/ci_gate.py code
+
   ci-ok:
     name: CI OK
     if: always()
-    needs: [detect, policy, secrets, dependency-review, lint, test, maestro]
+    needs: [detect, policy, secrets, dependency-review, code-validation]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     steps:
-      - name: Todos os jobs passaram ou foram pulados
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Testar a agregação do CI
+        run: python3 -B -m unittest discover -s scripts/ci/tests -v
+      - name: Exigir validação do código e políticas com labels atuais
         env:
-          RESULTS: ${{ join(needs.*.result, ' ') }}
-        run: |
-          echo "Resultados: $RESULTS"
-          [[ "$RESULTS" != *failure* && "$RESULTS" != *cancelled* ]]
+          NEEDS: ${{ toJSON(needs) }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/ci/ci_gate.py

@@ -11,6 +11,9 @@ let package = Package(
         .library(name: "ClaraInfrastructure", targets: ["ClaraInfrastructure"]),
         .library(name: "ClaraUI", targets: ["ClaraUI"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", exact: "1.19.5"),
+    ],
     targets: [
         .target(name: "ClaraCore", swiftSettings: swiftSettings),
         .target(name: "ClaraInfrastructure", dependencies: ["ClaraCore"], swiftSettings: swiftSettings),
@@ -28,6 +31,17 @@ let package = Package(
         .testTarget(name: "TodayFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
         .testTarget(name: "RecordsFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
         .testTarget(name: "ConsultationFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
+        .testTarget(
+            name: "SnapshotTests",
+            dependencies: [
+                "ClaraCore",
+                "ClaraInfrastructure",
+                "ClaraUI",
+                "ClaraTestSupport",
+                .product(name: "SnapshotTesting", package: "swift-snapshot-testing"),
+            ],
+            exclude: ["__Snapshots__"]
+        ),
     ],
     swiftLanguageModes: [.v5]
 )

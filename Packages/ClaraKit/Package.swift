@@ -25,6 +25,7 @@ let package = Package(
         .testTarget(name: "ClaraNetworkingTests", dependencies: ["ClaraInfrastructure"]),
         .testTarget(name: "ClaraServicesTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
         .testTarget(name: "ClaraAITests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
+        .testTarget(name: "TodayFeatureTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraUI", "ClaraTestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )

@@ -34,6 +34,15 @@ commit tem só eles, e o app entrou por PR, passando por todas as barreiras.
 | Supressão nova (`swiftlint:disable`, `@unchecked Sendable`, `try!`, teste desativado, snapshot regravado...) | ❌ falha | Label `guardrail-exception` + justificativa no PR |
 | Número de testes diminuiu | ❌ falha | Label `guardrail-exception` |
 
+No CI, alterações somente em Markdown na raiz ou em prosa/imagens raster dentro de `docs/`
+podem pular Maestro. Qualquer outro caminho desconhecido mantém os fluxos. PRs executam
+todos os fluxos, exceto os marcados com a tag Maestro `full`; os fluxos sem tag continuam
+incluídos como smoke. A execução semanal e `workflow_dispatch` executam a suíte inteira.
+Assim, um fluxo novo entra no smoke automaticamente e só sai dele quando alguém o marca
+explicitamente como `full`.
+Flows `full` podem falhar sem bloquear o PR e a falha pode aparecer só na validação manual de
+release; rode `workflow_dispatch` antes de uma release para validar a suíte completa.
+
 Labels são decisão humana: os hooks impedem a IA de adicioná-los.
 
 Ao adicionar ou remover labels, o CI reavalia as políticas com os labels atuais sem

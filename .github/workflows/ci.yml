@@ -14,13 +14,16 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
   # Label edits must never cancel an in-progress code validation.
-  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ (github.event.action == 'labeled' || github.event.action == 'unlabeled') && 'labels' || 'code' }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name == 'schedule' && 'schedule' || github.event_name == 'workflow_dispatch' && 'manual' || (github.event.action == 'labeled' || github.event.action == 'unlabeled') && 'labels' || 'code' }}
   cancel-in-progress: true
 
 env:
@@ -33,14 +36,24 @@ jobs:
     outputs:
       app: ${{ steps.detect.outputs.app }}
       maestro: ${{ steps.detect.outputs.maestro }}
+      maestro_mode: ${{ steps.detect.outputs.maestro_mode }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - id: detect
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
           echo "app=$([[ -f project.yml ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
-          echo "maestro=$(compgen -G '.maestro/*.yaml' >/dev/null && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          mode=$(python3 scripts/ci/maestro_selection.py --event "$GITHUB_EVENT_NAME" --base "$BASE_SHA" --head "$GITHUB_SHA")
+          echo "maestro_mode=$mode" >> "$GITHUB_OUTPUT"
+          if compgen -G '.maestro/*.yaml' >/dev/null; then
+            echo "maestro=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "maestro=false" >> "$GITHUB_OUTPUT"
+          fi
 
   policy:
     name: Políticas (dependências, guardrails, supressões, testes)
@@ -143,7 +156,7 @@ jobs:
   maestro:
     name: Fluxos de ponta a ponta (Maestro)
     needs: [detect, lint]
-    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled' && needs.detect.outputs.maestro == 'true'
+    if: needs.detect.outputs.app == 'true' && github.event.action != 'labeled' && github.event.action != 'unlabeled' && needs.detect.outputs.maestro == 'true' && needs.detect.outputs.maestro_mode != 'skip'
     runs-on: macos-26
     timeout-minutes: 40
     steps:
@@ -168,7 +181,13 @@ jobs:
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl install "$UDID" build/dd/Build/Products/Debug-iphonesimulator/Clara.app
-          maestro --device "$UDID" test .maestro --format junit --output build/maestro.xml --test-output-dir build/maestro
+          if [[ "${{ needs.detect.outputs.maestro_mode }}" == smoke ]]; then
+            maestro --device "$UDID" test .maestro --exclude-tags=full --format junit --output build/maestro.xml --test-output-dir build/maestro
+          else
+            maestro --device "$UDID" test .maestro --format junit --output build/maestro.xml --test-output-dir build/maestro
+          fi
+      - name: Exigir ao menos um fluxo Maestro
+        run: python3 scripts/ci/maestro_result_gate.py build/maestro.xml
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: failure()
         with:

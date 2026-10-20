@@ -14,12 +14,14 @@ SPEC.loader.exec_module(gate)
 
 
 class CodeResultsTests(unittest.TestCase):
-    def results(self, app="true", maestro="true"):
+    def results(self, app="true", maestro="true", maestro_mode="smoke"):
         return {
-            "detect": {"result": "success", "outputs": {"app": app, "maestro": maestro}},
+            "detect": {"result": "success", "outputs": {
+                "app": app, "maestro": maestro, "maestro_mode": maestro_mode,
+            }},
             "lint": {"result": "success" if app == "true" else "skipped"},
             "test": {"result": "success" if app == "true" else "skipped"},
-            "maestro": {"result": "success" if app == maestro == "true" else "skipped"},
+            "maestro": {"result": "success" if app == maestro == "true" and maestro_mode != "skip" else "skipped"},
         }
 
     def test_all_required_jobs_must_succeed(self):
@@ -34,10 +36,22 @@ class CodeResultsTests(unittest.TestCase):
     def test_only_absent_app_or_flows_can_skip(self):
         gate.check_code(self.results(app="false"))
         gate.check_code(self.results(maestro="false"))
+        gate.check_code(self.results(maestro_mode="skip"))
         with self.assertRaises(ValueError):
             gate.check_code({})
         needs = self.results()
         needs["detect"]["outputs"] = {}
+        with self.assertRaises(ValueError):
+            gate.check_code(needs)
+
+    def test_only_selected_modes_can_skip_and_missing_mode_fails_closed(self):
+        for mode in ("smoke", "full"):
+            needs = self.results(maestro_mode=mode)
+            needs["maestro"]["result"] = "skipped"
+            with self.subTest(mode=mode), self.assertRaises(ValueError):
+                gate.check_code(needs)
+        needs = self.results()
+        del needs["detect"]["outputs"]["maestro_mode"]
         with self.assertRaises(ValueError):
             gate.check_code(needs)
 

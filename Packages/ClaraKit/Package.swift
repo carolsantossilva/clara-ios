@@ -9,10 +9,12 @@ let package = Package(
     products: [
         .library(name: "ClaraCore", targets: ["ClaraCore"]),
         .library(name: "ClaraInfrastructure", targets: ["ClaraInfrastructure"]),
+        .library(name: "ClaraUI", targets: ["ClaraUI"]),
     ],
     targets: [
         .target(name: "ClaraCore", swiftSettings: swiftSettings),
         .target(name: "ClaraInfrastructure", dependencies: ["ClaraCore"], swiftSettings: swiftSettings),
+        .target(name: "ClaraUI", dependencies: ["ClaraCore", "ClaraInfrastructure"], swiftSettings: swiftSettings),
         .target(
             name: "ClaraTestSupport",
             dependencies: ["ClaraCore", "ClaraInfrastructure"],

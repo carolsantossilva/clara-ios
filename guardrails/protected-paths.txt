@@ -1,7 +1,6 @@
 # Caminhos que definem os próprios guardrails.
 # - Hooks do Claude Code bloqueiam edição desses caminhos pela IA.
 # - No CI, um PR que mexe neles só passa com o label "guardrails-change".
-# - O CODEOWNERS aponta a dona do repositório para todos eles.
 # Um prefixo terminado em "/" cobre a pasta inteira.
 .github/
 .claude/
@@ -16,4 +15,5 @@ scripts/ci/
 muter.conf.yml
 AGENTS.md
 CLAUDE.md
+REVIEW.md
 SECURITY.md

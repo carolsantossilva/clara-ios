@@ -67,6 +67,22 @@ pacote existe e é o original (nomes parecidos são um vetor de ataque). Uma pes
 ## Git
 
 - Nunca commite na `main`; crie uma branch (`feat/…`, `fix/…`, `chore/…`).
-- Mensagens no imperativo, em português: `Adiciona filtro por período na Consulta`.
+- Commits and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+  `<type>(<optional scope>): <description>`, imperative mood, lowercase description.
+  - Types: `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, `chore`, `style`, `revert`.
+  - Scopes: `today`, `records`, `consultation`, `app`, `core`, `storage`, `networking`,
+    `services`, `ai`, `design-system`, `guardrails`.
+  - Example: `feat(consultation): add period filter`. A breaking change adds `!` before the colon.
+  - Merges are squash-only, so the PR title becomes the commit on `main`; CI checks it.
 - Nunca use `--no-verify`, force push, nem mexa em labels, rulesets ou configurações do GitHub.
 - Abrir PR é permitido; **merge é sempre humano**.
+
+## PR instructions
+
+- Before creating or editing a PR description, read `.github/pull_request_template.md`
+  and use it as the structure. Preserve every section and checklist item, including when
+  updating an existing PR.
+- Fill in the change, verification, code origin and exceptions with evidence from the
+  actual diff and checks. State when an item is not applicable or has not been verified.
+- Check a box only when its full statement is supported. Never attest on a person's
+  behalf that they read or approved the diff; leave those statements for the person.

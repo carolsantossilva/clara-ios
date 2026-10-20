@@ -15,7 +15,7 @@ Revisão humana sozinha não escala para o volume de código gerado.
 - **Verificações determinísticas em camadas:** hooks do Claude Code → hooks do git → CI → regras
   da `main` no GitHub. Instruções em `AGENTS.md` orientam, mas não são a garantia.
 - **Os guardrails se protegem:** a IA não edita arquivos de guardrail (hook), mudanças neles exigem
-  label humano (CI) e passam pela dona (CODEOWNERS).
+  label humano (CI), e só uma pessoa faz o merge.
 - **Exceções explícitas:** supressões e remoção de testes não são proibidas, mas exigem decisão
   humana registrada (label + justificativa no PR).
 - **Cadeia de suprimentos fechada:** lista de dependências permitidas, versões exatas, actions por

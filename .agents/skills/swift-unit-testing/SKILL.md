@@ -9,7 +9,6 @@ Use the existing ClaraKit testing patterns to make behavior failures determinist
 
 ## Before writing tests
 
-- Read the root [AGENTS.md](../../../AGENTS.md) and [ClaraKit instructions](../../../Packages/ClaraKit/AGENTS.md). They own the project's test-first, validation, and safety rules; follow them rather than duplicating them here.
 - Inspect the package targets and nearby tests. Put tests in the target that owns the behavior, and follow that target's existing conventions.
 - Prefer tests of observable results, thrown errors, state changes, and relevant side effects over checks of private implementation details.
 

@@ -94,6 +94,7 @@ public actor LocalDatabase {
     }
 
     private static func excludeFromBackup(_ fileURL: URL) throws {
+        var fileURL = fileURL
         var resourceValues = URLResourceValues()
         resourceValues.isExcludedFromBackup = true
         try fileURL.setResourceValues(resourceValues)

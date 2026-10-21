@@ -36,7 +36,6 @@ public struct MomentDraft: Equatable, Sendable {
         )
     }
 
-    /// Same rule as the original app: one chosen word OR any text is enough.
     public var hasContent: Bool {
         mood != nil || [note, context, helpedOrHindered].contains { !$0.trimmed.isEmpty }
     }

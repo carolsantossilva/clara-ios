@@ -10,19 +10,11 @@ public struct URLSessionHTTPClient: HTTPClient {
 
     // MARK: - Initialization
 
-    public init(
-        baseURL: URL,
-        session: any URLSessionProtocol = URLSession.shared,
-        retryPolicy: RetryPolicy = RetryPolicy()
-    ) {
-        self.init(baseURL: baseURL, session: session, retryPolicy: retryPolicy, clock: ContinuousClock())
-    }
-
     public init<C: Clock>(
         baseURL: URL,
         session: any URLSessionProtocol = URLSession.shared,
         retryPolicy: RetryPolicy = RetryPolicy(),
-        clock: C
+        clock: C = ContinuousClock()
     ) where C.Duration == Duration {
         self.baseURL = baseURL
         self.session = session

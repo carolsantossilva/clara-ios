@@ -19,7 +19,7 @@ public enum ReportHTMLRenderer {
         guard let templateURL = Bundle.module.url(
             forResource: "report",
             withExtension: "html",
-            subdirectory: "Reports/Resources"
+            subdirectory: "Resources"
         ) else {
             throw Error.templateNotFound
         }

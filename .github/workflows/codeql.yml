@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   detect:
     runs-on: ubuntu-24.04
@@ -53,6 +57,9 @@ jobs:
     needs: detect
     if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
     runs-on: macos-26
+    concurrency:
+      group: macos-ci
+      queue: max
     timeout-minutes: 60
     permissions:
       security-events: write

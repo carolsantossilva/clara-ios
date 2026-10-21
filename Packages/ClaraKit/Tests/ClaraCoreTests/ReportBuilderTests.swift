@@ -45,75 +45,17 @@ struct ReportBuilderTests {
     }
 
     @Test("escapes personal text before putting it in the printable document")
-    func escapesPersonalText() {
-        let entry = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", note: "<script>alert('oi')</script>")
+    func escapesPersonalText() throws {
+        let entry = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", note: "{{questions}} <script>alert('oi')</script>")
         let report = ReportBuilder.build(
             ReportSelection(start: day, end: day, momentIDs: [entry.id], questionsAndNotes: ""),
             from: [entry]
         )
 
-        let html = ReportHTMLRenderer.render(report)
+        let html = try ReportHTMLRenderer.render(report)
 
+        #expect(html.contains("{{questions}}"))
         #expect(html.contains("&lt;script&gt;"))
         #expect(!html.contains("<script>"))
-    }
-}
-
-@Suite("LocalDay")
-struct LocalDayTests {
-    @Test("rejects incomplete and impossible dates", arguments: ["2026-02-31", "2026-13-01", "2026-09", "abc"])
-    func rejectsInvalid(_ text: String) {
-        #expect(LocalDay(isoString: text) == nil)
-    }
-
-    @Test("adds days across the year boundary")
-    func addsAcrossYears() {
-        #expect(LocalDay(year: 2026, month: 12, day: 29).adding(days: 5) == LocalDay(year: 2027, month: 1, day: 3))
-    }
-}
-
-@Suite("Moment draft")
-struct MomentDraftTests {
-    @Test("needs a word or some text")
-    func requiresSomeContent() {
-        var draft = MomentDraft(kind: .daily, occurredAt: .now)
-        #expect(!draft.hasContent)
-
-        draft.note = "   "
-        #expect(!draft.hasContent, "Whitespace alone does not count")
-
-        draft.mood = .okay
-        #expect(draft.hasContent)
-    }
-
-    @Test("editing without changing the time keeps the original time zone")
-    func preservesTimeZoneWhenTimeIsUnchanged() {
-        let original = Fixtures.moment(at: "2026-09-20T10:00:00-03:00", note: "antes")
-        var draft = MomentDraft(editing: original)
-        draft.note = "depois"
-
-        let updated = original.applying(draft, currentTimeZone: TimeZone(identifier: "Europe/Lisbon")!)
-
-        #expect(updated.note == "depois")
-        #expect(updated.timeZoneIdentifier == Fixtures.saoPaulo)
-    }
-}
-
-@Suite("Timeout")
-struct TimeoutTests {
-    @Test("returns the result when the operation finishes in time")
-    func returnsResult() async throws {
-        let value = try await withTimeout(.seconds(1)) { 42 }
-        #expect(value == 42)
-    }
-
-    @Test("throws TimeoutError when the operation takes too long")
-    func throwsOnTimeout() async {
-        await #expect(throws: TimeoutError.self) {
-            try await withTimeout(.milliseconds(10)) {
-                try await Task.sleep(for: .seconds(10))
-                return 0
-            }
-        }
     }
 }

@@ -11,32 +11,40 @@ import Foundation
 /// With thousands of records, the next step would be SQLite (GRDB/SwiftData)
 /// behind the same repository protocols; the features would not change.
 public actor LocalDatabase {
+    // MARK: - Snapshot
+
+    /// A value snapshot of all persisted records, encoded as the database JSON file.
     public struct Snapshot: Codable, Equatable, Sendable {
         public var tasks: [FocusTask]
-        public var parkingNotes: [ParkingNote]
+        public var distractions: [Distraction]
         public var moments: [Moment]
         public var focusID: UUID?
 
         public init(
             tasks: [FocusTask] = [],
-            parkingNotes: [ParkingNote] = [],
+            distractions: [Distraction] = [],
             moments: [Moment] = [],
             focusID: UUID? = nil
         ) {
             self.tasks = tasks
-            self.parkingNotes = parkingNotes
+            self.distractions = distractions
             self.moments = moments
             self.focusID = focusID
         }
     }
 
+    // MARK: - State
+
     private var snapshot: Snapshot
     private let fileURL: URL?
+
+    // MARK: - Initialization
 
     /// - Parameter fileURL: `nil` keeps everything in memory (tests, previews, UI tests).
     public init(fileURL: URL?) throws {
         self.fileURL = fileURL
         if let fileURL, FileManager.default.fileExists(atPath: fileURL.path) {
+            try Self.excludeFromBackup(fileURL)
             let data = try Data(contentsOf: fileURL)
             snapshot = try Self.makeDecoder().decode(Snapshot.self, from: data)
         } else {
@@ -48,6 +56,8 @@ public actor LocalDatabase {
         self.fileURL = nil
         self.snapshot = snapshot
     }
+
+    // MARK: - Reading and writing
 
     public static func defaultFileURL() throws -> URL {
         let directory = try FileManager.default
@@ -71,13 +81,25 @@ public actor LocalDatabase {
         return result
     }
 
+    // MARK: - Persistence
+
     private func persist(_ snapshot: Snapshot) throws {
         guard let fileURL else { return }
         let data = try Self.makeEncoder().encode(snapshot)
         // .completeFileProtection: the file stays encrypted while the device is locked.
         // Records may contain health information (sensitive data under Brazil's LGPD).
         try data.write(to: fileURL, options: [.atomic, .completeFileProtection])
+        // Atomic replacement may reset this attribute, so restore it after every write.
+        try Self.excludeFromBackup(fileURL)
     }
+
+    private static func excludeFromBackup(_ fileURL: URL) throws {
+        var resourceValues = URLResourceValues()
+        resourceValues.isExcludedFromBackup = true
+        try fileURL.setResourceValues(resourceValues)
+    }
+
+    // MARK: - JSON coding
 
     private static func makeEncoder() -> JSONEncoder {
         let encoder = JSONEncoder()

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Swift Documentation"
+  short_description: "Write Swift API docs with DocC"

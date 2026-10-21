@@ -26,7 +26,7 @@ struct LocalRepositoriesTests {
 
     @Test("pausing bumps the revision and completed tasks leave the list")
     func pauseAndComplete() async throws {
-        let repository = LocalTaskRepository(database: LocalDatabase(inMemory: .init()))
+        let repository = LocalTaskRepository(database: LocalDatabase(inMemory: .init()), now: { t0 })
         let task = try await repository.create(title: "Exames", nextAction: "")
 
         let paused = try await repository.savePause(id: task.id, whereStopped: "documentos", nextAction: "abrir pasta")
@@ -40,7 +40,7 @@ struct LocalRepositoriesTests {
 
     @Test("editing a stale version fails with a conflict instead of overwriting")
     func optimisticConcurrency() async throws {
-        let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()))
+        let repository = LocalMomentRepository(database: LocalDatabase(inMemory: .init()), now: { t0 })
         let created = try await repository.create(MomentDraft(kind: .event, occurredAt: t0, note: "original"))
 
         var firstEdit = created
@@ -58,7 +58,7 @@ struct LocalRepositoriesTests {
     @Test("deletion is soft: the record leaves the list")
     func softDelete() async throws {
         let database = LocalDatabase(inMemory: .init())
-        let repository = LocalMomentRepository(database: database)
+        let repository = LocalMomentRepository(database: database, now: { t0 })
         let moment = try await repository.create(MomentDraft(kind: .daily, occurredAt: t0, mood: .good))
 
         try await repository.delete(moment)
@@ -74,12 +74,27 @@ struct LocalRepositoriesTests {
         defer { try? FileManager.default.removeItem(at: url) }
 
         let first = try LocalDatabase(fileURL: url)
-        _ = try await LocalParkingRepository(database: first).create(text: "ligar para a clínica")
+        let repository = LocalDistractionRepository(database: first, now: { t0 })
+        _ = try await repository.create(text: "ligar para a clínica")
 
+        var resourceValues = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        #expect(resourceValues.isExcludedFromBackup == true)
+
+        resourceValues.isExcludedFromBackup = false
+        try url.setResourceValues(resourceValues)
+        _ = try await repository.create(text: "marcar consulta")
+        resourceValues = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        #expect(resourceValues.isExcludedFromBackup == true)
+
+        resourceValues.isExcludedFromBackup = false
+        try url.setResourceValues(resourceValues)
         let reopened = try LocalDatabase(fileURL: url)
-        let notes = try await LocalParkingRepository(database: reopened).listOpen()
-        #expect(notes.map(\.text) == ["ligar para a clínica"])
+        let reopenedValues = try url.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        #expect(reopenedValues.isExcludedFromBackup == true)
+        let distractions = try await LocalDistractionRepository(database: reopened, now: { t0 }).listOpen()
+        #expect(Set(distractions.map(\.text)) == ["ligar para a clínica", "marcar consulta"])
     }
+
 }
 
 /// Controllable clock for tests (thread-safe because it is read from inside the actor).

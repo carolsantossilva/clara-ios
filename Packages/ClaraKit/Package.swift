@@ -11,7 +11,11 @@ let package = Package(
         .library(name: "ClaraInfrastructure", targets: ["ClaraInfrastructure"]),
     ],
     targets: [
-        .target(name: "ClaraCore", swiftSettings: swiftSettings),
+        .target(
+            name: "ClaraCore",
+            resources: [.copy("Reports/Resources")],
+            swiftSettings: swiftSettings
+        ),
         .target(name: "ClaraInfrastructure", dependencies: ["ClaraCore"], swiftSettings: swiftSettings),
         .target(
             name: "ClaraTestSupport",
@@ -20,7 +24,7 @@ let package = Package(
         ),
         .testTarget(name: "ClaraCoreTests", dependencies: ["ClaraCore", "ClaraTestSupport"]),
         .testTarget(name: "ClaraStorageTests", dependencies: ["ClaraCore", "ClaraInfrastructure", "ClaraTestSupport"]),
-        .testTarget(name: "ClaraNetworkingTests", dependencies: ["ClaraInfrastructure"]),
+        .testTarget(name: "ClaraNetworkingTests", dependencies: ["ClaraInfrastructure", "ClaraTestSupport"]),
     ],
     swiftLanguageModes: [.v5]
 )

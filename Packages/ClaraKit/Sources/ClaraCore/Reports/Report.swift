@@ -1,5 +1,7 @@
 import Foundation
 
+// MARK: - Report input
+
 public struct ReportSelection: Sendable {
     public var start: LocalDay
     public var end: LocalDay
@@ -14,12 +16,16 @@ public struct ReportSelection: Sendable {
     }
 }
 
+// MARK: - Report output
+
 public struct ReportDocument: Equatable, Sendable {
     public let start: LocalDay
     public let end: LocalDay
     public let entries: [Moment]
     public let questionsAndNotes: String
 }
+
+// MARK: - Report building
 
 /// Builds the summary for an appointment. A pure function: same input, same output,
 /// which makes it the easiest (and most important) part to test.
@@ -28,7 +34,7 @@ public enum ReportBuilder {
         let entries = moments
             .filter { $0.deletedAt == nil && selection.momentIDs.contains($0.id) }
             .filter { moment in
-                let day = LocalDay(moment.occurredAt, in: moment.timeZone)
+                guard let day = LocalDay(moment.occurredAt, in: moment.timeZone) else { return false }
                 return day >= selection.start && day <= selection.end
             }
             .sorted { $0.occurredAt < $1.occurredAt }
@@ -52,6 +58,8 @@ public enum ReportBuilder {
         return build(everything, from: moments).entries
     }
 }
+
+// MARK: - Date formatting
 
 public enum ClaraFormat {
     public static let locale = Locale(identifier: "pt_BR")

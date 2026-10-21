@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <title>Resumo para consulta — Clara</title>
+  <style>
+    :root { color: #2b2733; font: 14px/1.55 -apple-system, sans-serif; }
+    body { margin: 0; }
+    .brand { color: #5b4b73; font-size: 19px; font-weight: 700; letter-spacing: -.05em; }
+    h1 { margin: 32px 0 8px; font: 500 30px Georgia, serif; }
+    .period, time, small, .footnote { color: #746e7b; }
+    .entry { border-top: 1px solid #e9e5e9; padding: 14px 0; page-break-inside: avoid; }
+    .entry time { display: block; font-size: 12px; }
+    .entry strong { color: #5f4e76; }
+    .entry p { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .questions { margin-top: 25px; border-radius: 14px; padding: 16px; background: #f3eff8; page-break-inside: avoid; }
+    .questions h2 { margin: 0 0 8px; color: #5b4b73; font-size: 14px; }
+    .questions p { margin: 0; white-space: pre-wrap; }
+    .footnote { margin-top: 30px; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="brand">clara<span style="color:#d69673">.</span> <small>RESUMO PESSOAL</small></div>
+  <h1>Registros para consulta</h1>
+  <p class="period">Período: {{start}} a {{end}} · Preparado em {{prepared}}</p>
+  {{emptyMessage}}{{entries}}
+  {{questions}}
+  <p class="footnote">Este resumo reúne apenas o que escolhi registrar. Não explica causas nem substitui uma avaliação profissional.</p>
+</body>
+</html>

@@ -4,6 +4,8 @@ import Foundation
 // implementation (Dependency Inversion): production uses the local database,
 // tests use an in-memory database or a double that fails on purpose.
 
+// MARK: - Repository contracts
+
 public protocol TaskRepository: Sendable {
     func create(title: String, nextAction: String) async throws -> FocusTask
     func listOpen() async throws -> [FocusTask]
@@ -17,10 +19,10 @@ public protocol TaskRepository: Sendable {
     func setState(id: UUID, _ state: FocusTask.State) async throws -> FocusTask?
 }
 
-public protocol ParkingRepository: Sendable {
+public protocol DistractionRepository: Sendable {
     @discardableResult
-    func create(text: String) async throws -> ParkingNote
-    func listOpen() async throws -> [ParkingNote]
+    func create(text: String) async throws -> Distraction
+    func listOpen() async throws -> [Distraction]
     func complete(id: UUID) async throws
 }
 
@@ -33,6 +35,8 @@ public protocol MomentRepository: Sendable {
     func update(_ moment: Moment) async throws -> Moment
     func delete(_ moment: Moment) async throws
 }
+
+// MARK: - Storage errors
 
 public enum StorageError: Error, Equatable {
     case notFound

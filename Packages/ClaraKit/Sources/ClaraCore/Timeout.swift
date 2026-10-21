@@ -25,7 +25,7 @@ public func withTimeout<C: Clock, T: Sendable>(
     _ duration: Duration,
     clock: C,
     operation: @escaping @Sendable () async throws -> T
-) async throws -> T {
+) async throws -> T where C.Duration == Duration {
     try await withThrowingTaskGroup(of: T.self) { group in
         group.addTask { try await operation() }
         group.addTask {

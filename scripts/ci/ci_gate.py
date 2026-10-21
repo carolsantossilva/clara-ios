@@ -22,12 +22,17 @@ def check_code(needs):
     outputs = detect.get("outputs", {})
     require(detect.get("result") == "success", "Detection did not succeed")
     require(outputs.get("app") in ("true", "false"), "Missing app detection")
+    require(outputs.get("package") in ("true", "false"), "Missing package detection")
     require(outputs.get("maestro") in ("true", "false"), "Missing flow detection")
     require(outputs.get("maestro_mode") in ("skip", "smoke", "full"), "Missing Maestro selection")
-    for job in ("lint", "test", "maestro"):
-        applies = outputs["app"] == "true" and (
-            job != "maestro" or (outputs["maestro"] == "true" and outputs["maestro_mode"] != "skip")
-        )
+    for job in ("lint", "test", "package", "maestro"):
+        applies = {
+            "lint": outputs["app"] == "true" or outputs["package"] == "true",
+            "test": outputs["app"] == "true",
+            "package": outputs["package"] == "true" and outputs["app"] != "true",
+            "maestro": outputs["app"] == "true" and outputs["maestro"] == "true"
+            and outputs["maestro_mode"] != "skip",
+        }[job]
         expected = "success" if applies else "skipped"
         require(needs.get(job, {}).get("result") == expected, f"{job} must be {expected}")
 

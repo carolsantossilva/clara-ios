@@ -70,7 +70,7 @@ struct LocalRepositoriesTests {
 
     @Test("persists to disk and reloads")
     func persistsToDisk() async throws {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("clara-\(UUID().uuidString).json")
+        var url = FileManager.default.temporaryDirectory.appendingPathComponent("clara-\(UUID().uuidString).json")
         defer { try? FileManager.default.removeItem(at: url) }
 
         let first = try LocalDatabase(fileURL: url)

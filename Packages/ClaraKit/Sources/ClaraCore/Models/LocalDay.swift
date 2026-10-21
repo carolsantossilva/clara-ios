@@ -51,9 +51,14 @@ public struct LocalDay: Comparable, Hashable, Sendable, CustomStringConvertible 
     /// - Parameters:
     ///   - date: The absolute date to convert.
     ///   - timeZone: The time zone used to determine the calendar day.
-    /// - Returns: `nil` if the calendar cannot extract the year, month, and day.
+    /// - Returns: `nil` if the calendar cannot represent the date or extract its year, month, and day.
     public init?(_ date: Date, in timeZone: TimeZone) {
-        let components = Self.calendar(in: timeZone).dateComponents([.year, .month, .day], from: date)
+        let calendar = Self.calendar(in: timeZone)
+        guard date.timeIntervalSinceReferenceDate.isFinite,
+              let interval = calendar.dateInterval(of: .day, for: date),
+              interval.contains(date)
+        else { return nil }
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
         guard let year = components.year, let month = components.month, let day = components.day else { return nil }
         self.init(year: year, month: month, day: day)
     }

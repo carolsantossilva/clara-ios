@@ -6,6 +6,18 @@ import Testing
 
 @Suite("Holidays (BrasilAPI)")
 struct HolidayServiceTests {
+    @Test("calendar errors propagate without requesting holidays")
+    func rejectsUnrepresentableWindow() async {
+        let client = FakeHTTPClient { _ in [Holiday]() }
+        let service = BrasilAPIHolidayService(client: client)
+        let day = LocalDay(year: 2026, month: 9, day: 20)
+
+        await #expect(throws: LocalDay.AdditionError.calendarCalculationFailed) {
+            try await service.upcomingHoliday(from: day, within: Int.max)
+        }
+        #expect(client.requestedPaths.isEmpty)
+    }
+
     @Test("concurrent calls for the same year make a single request")
     func deduplicatesInFlightRequests() async throws {
         let client = FakeHTTPClient { _ in

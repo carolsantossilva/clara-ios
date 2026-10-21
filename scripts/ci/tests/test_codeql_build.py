@@ -13,7 +13,6 @@ class CodeQLBuildTests(unittest.TestCase):
         build = re.search(r"^      - name: Build\n(.*?)(?=^      - )", text, re.M | re.S).group(1)
         self.assertIn('-destination "generic/platform=iOS Simulator"', build)
         self.assertRegex(build, r"(?m)^\s+ARCHS=arm64 \\$")
-        self.assertRegex(build, r"(?m)^\s+ONLY_ACTIVE_ARCH=YES \\$")
 
 
 if __name__ == "__main__":

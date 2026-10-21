@@ -29,7 +29,7 @@ private struct OperationWinsClock: Clock {
 
     private let waiter = SleepWaiter()
 
-    var now: Instant { Instant(offset: .zero) }
+    var now: Instant { ImmediateClock().now }
     var minimumResolution: Duration { .zero }
 
     func sleep(until deadline: Instant, tolerance: Duration?) async throws {

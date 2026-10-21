@@ -24,7 +24,7 @@ final class AppEnvironment {
         self.storageWarning = storageWarning
         self.todayViewModel = TodayViewModel(dependencies: TodayDependencies(
             tasks: LocalTaskRepository(database: database),
-            parking: LocalParkingRepository(database: database),
+            parking: LocalDistractionRepository(database: database),
             suggester: suggester,
             holidays: holidays,
             analytics: analytics,

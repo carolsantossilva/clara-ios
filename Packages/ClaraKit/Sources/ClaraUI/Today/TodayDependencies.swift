@@ -6,7 +6,7 @@ import Foundation
 /// The app wires real implementations; the tests wire doubles.
 public struct TodayDependencies: Sendable {
     public var tasks: any TaskRepository
-    public var parking: any ParkingRepository
+    public var parking: any DistractionRepository
     public var suggester: any StepSuggesting
     public var holidays: any HolidayProviding
     public var analytics: any AnalyticsTracker
@@ -18,7 +18,7 @@ public struct TodayDependencies: Sendable {
 
     public init(
         tasks: any TaskRepository,
-        parking: any ParkingRepository,
+        parking: any DistractionRepository,
         suggester: any StepSuggesting,
         holidays: any HolidayProviding,
         analytics: any AnalyticsTracker,

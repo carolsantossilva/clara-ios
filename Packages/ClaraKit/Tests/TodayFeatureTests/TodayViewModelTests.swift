@@ -18,17 +18,18 @@ struct TodayViewModelTests {
 
     func makeViewModel(
         tasks: (any TaskRepository)? = nil,
-        holidays: any HolidayProviding = StaticHolidayProvider()
+        holidays: any HolidayProviding = StaticHolidayProvider(),
+        currentDate: @escaping @Sendable () -> Date = { Fixtures.date("2026-10-10T12:00:00-03:00") }
     ) -> TodayViewModel {
         let viewModel = TodayViewModel(dependencies: TodayDependencies(
             tasks: tasks ?? LocalTaskRepository(database: database, now: now.read),
-            parking: LocalParkingRepository(database: database, now: now.read),
+            parking: LocalDistractionRepository(database: database, now: now.read),
             suggester: StubStepSuggester(.succeed(["Abrir a conversa"])),
             holidays: holidays,
             analytics: analytics,
             crashReporter: crashReporter,
             clock: ImmediateClock(),
-            now: { Fixtures.date("2026-10-10T12:00:00-03:00") }
+            now: currentDate
         ))
         return viewModel
     }
@@ -114,6 +115,20 @@ struct TodayViewModelTests {
         let viewModel = makeViewModel(holidays: StaticHolidayProvider(holiday: holiday))
         await viewModel.loadHoliday()
         #expect(viewModel.upcomingHoliday == holiday)
+    }
+
+    @Test("an unrepresentable date does not show or track a holiday")
+    func rejectsInvalidHolidayDate() async {
+        let holiday = Holiday(date: "2026-10-12", name: "Nossa Senhora Aparecida")
+        let viewModel = makeViewModel(
+            holidays: StaticHolidayProvider(holiday: holiday),
+            currentDate: { Date(timeIntervalSince1970: 1e300) }
+        )
+
+        await viewModel.loadHoliday()
+
+        #expect(viewModel.upcomingHoliday == nil)
+        #expect(analytics.events.isEmpty)
     }
 
     @Test("parking for later clears the field and lists the note")

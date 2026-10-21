@@ -35,7 +35,7 @@ struct ConsultationViewModelTests {
     }
 
     @Test("unchecking removes from the summary")
-    func toggleRemovesFromReport() async {
+    func toggleRemovesFromReport() async throws {
         let first = Fixtures.moment(at: "2026-09-18T10:00:00-03:00")
         let second = Fixtures.moment(at: "2026-09-19T10:00:00-03:00")
         let viewModel = makeViewModel(moments: [first, second])
@@ -43,7 +43,29 @@ struct ConsultationViewModelTests {
 
         viewModel.toggle(first.id)
 
-        #expect(viewModel.report.entries.map(\.id) == [second.id])
+        let report = try #require(viewModel.report)
+        #expect(report.entries.map(\.id) == [second.id])
+    }
+
+    @Test("invalid period dates cannot produce or export a report", arguments: [true, false])
+    func rejectsInvalidPeriod(invalidStart: Bool) async {
+        let viewModel = makeViewModel(moments: [Fixtures.moment(at: "2026-09-18T10:00:00-03:00")])
+        await viewModel.load()
+        let invalid = Date(timeIntervalSince1970: 1e300)
+        if invalidStart {
+            viewModel.startDate = invalid
+        } else {
+            viewModel.endDate = invalid
+        }
+
+        #expect(viewModel.eligible.isEmpty)
+        #expect(viewModel.report == nil)
+        viewModel.exportPDF()
+
+        #expect(viewModel.exportedFileURL == nil)
+        #expect(exporter.lastHTML == nil)
+        #expect(analytics.events.isEmpty)
+        #expect(viewModel.alert != nil)
     }
 
     @Test("\"Este mês\" (this month) starts on day 1")

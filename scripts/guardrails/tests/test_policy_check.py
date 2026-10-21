@@ -16,9 +16,10 @@ policy.ROOT = Path(os.environ.get('POLICY_CHECK_ROOT', policy.ROOT))
 
 
 class SuppressionCommentTests(unittest.TestCase):
-    def check_line(self, text, expected, labels=None):
+    def check_line(self, text, expected, labels=None, source=None, line=1):
         report = policy.Report()
-        diff = policy.Diff(['Sources/Box.swift'], [], [('Sources/Box.swift', 1, text)])
+        path = 'Sources/Box.swift'
+        diff = policy.Diff([path], [(path, line, text)], {path: source or text})
         # Inspect reports without emitting annotations for intentional failing inputs.
         with patch.object(policy, "IN_CI", False):
             policy.check_suppressions(report, diff, set() if labels is None else labels)
@@ -35,14 +36,42 @@ class SuppressionCommentTests(unittest.TestCase):
         self.check_line('/* outer /* inner */ rationale */ final class Box: @unchecked Sendable {}', 1)
 
     def test_comment_mentions_are_not_suppressions(self):
-        for text in ('// @unchecked Sendable', '/* @unchecked Sendable */', '* @unchecked Sendable', '/* @unchecked Sendable */ let safe = 1', '/* outer /* inner */ @unchecked Sendable */ let safe = 1'):
+        for text in ('// @unchecked Sendable', '/* @unchecked Sendable */', '/* @unchecked Sendable */ let safe = 1', '/* outer /* inner */ @unchecked Sendable */ let safe = 1'):
             with self.subTest(text=text):
                 self.check_line(text, 0)
+        self.check_line(' * @unchecked Sendable', 0,
+                        source='/* rationale\n * @unchecked Sendable\n */', line=2)
 
     def test_comment_directives_are_still_detected(self):
-        for text in ('// swiftlint:disable all', '/* swiftlint:disable all */', '/* swiftformat:disable all */', '* swiftlint:disable all'):
+        for text in ('// swiftlint:disable all', '/* swiftlint:disable all */', '/* swiftformat:disable all */'):
             with self.subTest(text=text):
                 self.check_line(text, 1)
+        self.check_line(' * swiftlint:disable all', 1,
+                        source='/*\n * swiftlint:disable all\n */', line=2)
+
+    def test_directive_text_inside_a_string_is_not_a_suppression(self):
+        self.check_line('let example = "swiftlint:disable all"', 0)
+
+    def test_suppression_text_inside_multiline_string_is_not_a_suppression(self):
+        source = 'let example = """\ntry!\n"""\n'
+        self.check_line('try!', 0, source=source, line=2)
+
+    def test_raw_string_content_is_not_a_suppression(self):
+        source = 'let example = #"""\ntry!\n"""#\n'
+        self.check_line('try!', 0, source=source, line=2)
+
+    def test_raw_regex_content_is_not_a_suppression(self):
+        self.check_line('let example = #/try!/#', 0)
+        source = 'let example = ##/\ntry!\n/##\n'
+        self.check_line('try!', 0, source=source, line=2)
+
+    def test_raw_regex_interpolation_is_scanned_as_code(self):
+        self.check_line(r'let example = #/\#(try! risky())/#', 1)
+        self.check_line(r'let example = #/\#("try!")/#', 0)
+
+    def test_interpolation_is_code_but_nested_string_content_is_not(self):
+        self.check_line('let example = "\\(try! risky())"', 1)
+        self.check_line('let example = "\\("try!")"', 0)
 
     def test_active_suppression_without_comment(self):
         self.check_line('final class Box: @unchecked Sendable {}', 1)
@@ -193,6 +222,72 @@ let multiline = """
         self.git("add", "Package.swift")
         (self.root / "Package.swift").unlink()
         self.assertTrue(self.report(staged=True).errors)
+
+    def test_allowlisted_gem_from_git_or_path_source_is_rejected(self):
+        for declaration in ('gem "fastlane", git: "https://example.invalid/fastlane.git"',
+                            'gem "fastlane", path: "../fastlane"',
+                            'gem "fastlane", :git => "https://example.invalid/fastlane.git"'):
+            with self.subTest(declaration=declaration):
+                (self.root / "Gemfile").write_text(declaration + "\n", encoding="utf-8")
+                self.assertTrue(self.report().errors)
+
+    def test_gemspec_and_nested_gemfiles_fail_closed(self):
+        for declaration in ('gemspec', 'eval_gemfile "other.Gemfile"'):
+            with self.subTest(declaration=declaration):
+                (self.root / "Gemfile").write_text(declaration + "\n", encoding="utf-8")
+                self.assertTrue(self.report().errors)
+
+    def test_only_the_canonical_rubygems_source_is_allowed(self):
+        gemfile = self.root / "Gemfile"
+        for source, expected_errors in (("https://rubygems.org", 0),
+                                        ("https://example.invalid", 1)):
+            with self.subTest(source=source):
+                gemfile.write_text(f'source "{source}"\n', encoding="utf-8")
+                self.assertEqual(len(self.report().errors), expected_errors)
+
+
+class TestCountTests(unittest.TestCase):
+    def test_counts_only_test_target_declarations_outside_comments_and_strings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            tests = root / "Packages/ClaraKit/Tests/ClaraCoreTests/ActualTests.swift"
+            tests.parent.mkdir(parents=True)
+            tests.write_text(
+                "/*\n@Test\n*/\n"
+                'let example = """\n@Test func fakeInString() {}\n"""\n'
+                "@Test func actual() {}\n"
+                "func testAnotherActual() {}\n",
+                encoding="utf-8",
+            )
+            production = root / "Packages/ClaraKit/Sources/ClaraCore/Fake.swift"
+            production.parent.mkdir(parents=True)
+            production.write_text("@Test func fake() {}\nfunc testFake() {}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+
+            with patch.object(policy, "ROOT", root):
+                self.assertEqual(policy.count_tests(None), 2)
+
+
+class DiffTests(unittest.TestCase):
+    def test_added_double_plus_line_does_not_end_file_context(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
+            subprocess.run(["git", "config", "user.email", "test@example.invalid"], cwd=root, check=True)
+            source = root / "Sources/Thing.m"
+            source.parent.mkdir()
+            source.write_text("void update(void) {\n}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=root, check=True)
+            subprocess.run(["git", "commit", "--quiet", "-m", "base"], cwd=root, check=True)
+            source.write_text("void update(void) {\n++ counter;\nXCTSkip();\n}\n", encoding="utf-8")
+
+            with patch.object(policy, "ROOT", root):
+                diff = policy.collect_diff("HEAD", local=True)
+
+            self.assertEqual([line for _, _, line in diff.added_lines],
+                             ["++ counter;", "XCTSkip();"])
 
 
 if __name__ == '__main__':

@@ -86,9 +86,9 @@ def read_list(path: str, staged: bool = False) -> list[str]:
 
 @dataclass
 class Diff:
-    changed: list[str]
-    deleted: list[str]
+    touched: list[str]
     added_lines: list[tuple[str, int, str]]  # (arquivo, linha, conteúdo)
+    sources: dict[str, str] = field(default_factory=dict)
 
 
 def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
@@ -103,17 +103,21 @@ def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
         spec = [f"{base}...HEAD"]
 
     status = git("diff", "--name-status", "--no-renames", *spec)
-    changed, deleted = [], []
+    touched = []
     for row in status.splitlines():
-        kind, _, path = row.partition("\t")
-        (deleted if kind == "D" else changed).append(path)
+        _, _, path = row.partition("\t")
+        touched.append(path)
 
     added: list[tuple[str, int, str]] = []
     current, line_no = None, 0
+    in_hunk = False
     for row in git("diff", "-U0", "--no-renames", *spec).splitlines():
-        if row.startswith("+++ "):
+        if row.startswith("diff --git "):
+            current, in_hunk = None, False
+        elif not in_hunk and row.startswith("+++ "):
             current = row[6:] if row.startswith("+++ b/") else None
         elif row.startswith("@@"):
+            in_hunk = True
             match = re.search(r"\+(\d+)", row)
             line_no = int(match.group(1)) if match else 0
         elif row.startswith("+") and current:
@@ -122,23 +126,33 @@ def collect_diff(base: str, local: bool, staged: bool = False) -> Diff:
 
     if local and not staged:
         for path in git("ls-files", "--others", "--exclude-standard").splitlines():
-            changed.append(path)
+            touched.append(path)
             try:
                 text = (ROOT / path).read_text(encoding="utf-8")
             except (UnicodeDecodeError, OSError):
                 continue
             added += [(path, i, line) for i, line in enumerate(text.splitlines(), 1)]
 
-    return Diff(changed=changed, deleted=deleted, added_lines=added)
+    sources = {}
+    for path in {path for path, _, _ in added if path.endswith((".swift", ".m", ".h"))}:
+        try:
+            if staged:
+                sources[path] = git("show", f":{path}")
+            elif local:
+                sources[path] = (ROOT / path).read_text(encoding="utf-8")
+            else:
+                sources[path] = git("show", f"HEAD:{path}")
+        except (UnicodeDecodeError, OSError, subprocess.CalledProcessError):
+            continue
+
+    return Diff(touched=touched, added_lines=added, sources=sources)
 
 
 # ---------------------------------------------------------------- regra 1
 
 
 SWIFT_LITERAL = r'"[^"\\\r\n]+"'
-SWIFT_STRING = r'''(?P<hash>\#+)(?:"""[\s\S]*?"""|"[^\n]*?")(?P=hash)|"""[\s\S]*?"""|"(?:\\.|[^"\\])*"'''
-SWIFT_TOKEN = re.compile(r"//[^\n]*|/\*|" + SWIFT_STRING)
-SWIFT_PACKAGE = re.compile(SWIFT_STRING + r"|(?P<call>\.\s*package\s*\()")
+SWIFT_PACKAGE_CALL = re.compile(r"\.\s*package\s*\(")
 SWIFT_DECLARATION = re.compile(
     r"\.\s*package\s*\(\s*(?:name\s*:\s*" + SWIFT_LITERAL + r"\s*,\s*)?"
     r"(?:path\s*:\s*" + SWIFT_LITERAL + r"|url\s*:\s*"
@@ -146,25 +160,161 @@ SWIFT_DECLARATION = re.compile(
 )
 
 
-def swift_without_comments(text: str) -> str:
-    """Mask comments without changing line numbers or touching string literals."""
+def block_comment_end(text: str, start: int) -> int:
+    position, depth = start + 2, 1
+    while position < len(text) and depth:
+        if text.startswith("/*", position):
+            depth += 1
+            position += 2
+        elif text.startswith("*/", position):
+            depth -= 1
+            position += 2
+        else:
+            position += 1
+    return position
+
+
+def string_token(text: str, start: int, swift: bool = True) -> tuple[int, list[tuple[int, int]]] | None:
+    """Return a string end and any executable Swift interpolation ranges."""
+    position, hashes = start, 0
+    if text[position] == "#":
+        while position < len(text) and text[position] == "#":
+            hashes += 1
+            position += 1
+        if position == len(text) or text[position] != '"':
+            return None
+    elif text[position] not in ('"', "'"):
+        return None
+
+    quote = text[position]
+    marker = '"""' if quote == '"' and text.startswith('"""', position) else quote
+    closing = marker + "#" * hashes
+    position += len(marker)
+    interpolations = []
+    while position < len(text):
+        interpolation = "\\" + "#" * hashes + "(" if swift and quote == '"' else ""
+        if interpolation and text.startswith(interpolation, position):
+            content_start = position + len(interpolation)
+            end = interpolation_end(text, content_start)
+            if end is not None:
+                interpolations.append((content_start, end - 1))
+                position = end
+            else:
+                position = content_start
+        elif hashes and text.startswith("\\" + "#" * hashes, position):
+            position += hashes + 2
+        elif not hashes and text[position] == "\\":
+            position += 2
+        elif text.startswith(closing, position):
+            return position + len(closing), interpolations
+        else:
+            position += 1
+    return len(text), interpolations
+
+
+def regex_token(text: str, start: int) -> tuple[int, list[tuple[int, int]]] | None:
+    """Return a raw Swift regex end and any executable interpolation ranges."""
+    if text[start] != "#":
+        return None
+    position = start
+    while position < len(text) and text[position] == "#":
+        position += 1
+    hashes = position - start
+    if position == len(text) or text[position] != "/":
+        return None
+
+    position += 1
+    closing = "/" + "#" * hashes
+    interpolation = "\\" + "#" * hashes + "("
+    interpolations = []
+    while position < len(text):
+        if text.startswith(interpolation, position):
+            content_start = position + len(interpolation)
+            end = interpolation_end(text, content_start)
+            if end is not None:
+                interpolations.append((content_start, end - 1))
+                position = end
+            else:
+                position = content_start
+        elif text[position] == "\\":
+            position += 2
+        elif text.startswith(closing, position):
+            return position + len(closing), interpolations
+        else:
+            position += 1
+    return len(text), interpolations
+
+
+def interpolation_end(text: str, start: int) -> int | None:
+    position, depth = start, 1
+    while position < len(text):
+        if text.startswith("//", position):
+            end = text.find("\n", position)
+            position = len(text) if end < 0 else end
+        elif text.startswith("/*", position):
+            position = block_comment_end(text, position)
+        else:
+            token = regex_token(text, position) or string_token(text, position)
+            if token:
+                position = token[0]
+            elif text[position] == "(":
+                depth += 1
+                position += 1
+            elif text[position] == ")":
+                depth -= 1
+                position += 1
+                if not depth:
+                    return position
+            else:
+                position += 1
+    return None
+
+
+def blank(text: str) -> list[str]:
+    return ["\n" if char == "\n" else " " for char in text]
+
+
+def source_views(text: str, swift: bool = True) -> tuple[str, str, str]:
+    """Return manifest text, executable code, and comments with offsets preserved."""
+    manifest, code = list(text), list(text)
+    comments = ["\n" if char == "\n" else " " for char in text]
     position = 0
-    while match := SWIFT_TOKEN.search(text, position):
-        position = match.end()
-        if match.group().startswith("/*"):
-            depth = 1
-            while depth and (end := re.search(r"/\*|\*/", text[position:])):
-                depth += 1 if end.group() == "/*" else -1
-                position += end.end()
-            if depth:
-                position = len(text)
-        elif not match.group().startswith("//"):
-            continue
-        text = text[:match.start()] + re.sub(r"[^\n]", " ", text[match.start():position]) + text[position:]
-    return text
+    while position < len(text):
+        if text.startswith("//", position):
+            end = text.find("\n", position)
+            end = len(text) if end < 0 else end
+            comments[position:end] = text[position:end]
+            code[position:end] = ["\n" if char == "\n" else " " for char in text[position:end]]
+            manifest[position:end] = code[position:end]
+            position = end
+        elif text.startswith("/*", position):
+            start = position
+            position = block_comment_end(text, position)
+            comments[start:position] = text[start:position]
+            masked = blank(text[start:position])
+            code[start:position] = masked
+            manifest[start:position] = masked
+        else:
+            token = (regex_token(text, position) if swift else None) or string_token(text, position, swift)
+            if token is None:
+                position += 1
+            else:
+                end, interpolations = token
+                code[position:end] = blank(text[position:end])
+                for start, stop in interpolations:
+                    _, inner_code, inner_comments = source_views(text[start:stop], swift)
+                    code[start:stop] = list(inner_code)
+                    comments[start:stop] = list(inner_comments)
+                position = end
+    return "".join(manifest), "".join(code), "".join(comments)
 
 
-GEM = re.compile(r"^\s*gem\s+[\"']([^\"']+)[\"']", re.MULTILINE)
+GEM_CALL = re.compile(r"^[ \t]*gem\b", re.MULTILINE)
+GEM = re.compile(r"^[ \t]*gem[ \t]+(['\"])(?P<name>[^'\"]+)\1(?P<options>[^\n]*)$", re.MULTILINE)
+GEM_SOURCE_CALL = re.compile(r"^[ \t]*source\b", re.MULTILINE)
+GEM_SOURCE = re.compile(r"^[ \t]*source[ \t]+(['\"])(?P<url>[^'\"]+)\1[^\n]*$", re.MULTILINE)
+GEM_IMPORT = re.compile(r"^[ \t]*(?:gemspec|eval_gemfile)\b", re.MULTILINE)
+GEM_SOURCE_OVERRIDE = re.compile(r":?(?:git|github|path|source|branch|ref|tag)\s*(?::|=>)")
 
 
 def check_dependencies(report: Report, staged: bool = False) -> None:
@@ -177,12 +327,10 @@ def check_dependencies(report: Report, staged: bool = False) -> None:
             continue
         text = git("show", f":{path}") if staged else (ROOT / path).read_text(encoding="utf-8")
         if name == "Package.swift":
-            text = swift_without_comments(text)
-            for match in SWIFT_PACKAGE.finditer(text):
-                if not match.group("call"):
-                    continue
+            manifest, code, _ = source_views(text)
+            for match in SWIFT_PACKAGE_CALL.finditer(code):
                 line = text.count("\n", 0, match.start()) + 1
-                declaration = SWIFT_DECLARATION.match(text, match.start())
+                declaration = SWIFT_DECLARATION.match(manifest, match.start())
                 if not declaration:
                     report.error(
                         "Declaração Swift não reconhecida: use `.package(path: \"...\")` "
@@ -199,11 +347,30 @@ def check_dependencies(report: Report, staged: bool = False) -> None:
                         "adicioná-lo em guardrails/allowed-dependencies.txt.",
                         path, line,
                     )
-        elif name == "Gemfile":
-            for match in GEM.finditer(text):
-                if ("gem", match.group(1)) not in allowed:
-                    line = text.count("\n", 0, match.start()) + 1
-                    report.error(f"Gem fora da lista permitida: {match.group(1)}.", path, line)
+        else:
+            for call in GEM_SOURCE_CALL.finditer(text):
+                source = GEM_SOURCE.match(text, call.start())
+                line = text.count("\n", 0, call.start()) + 1
+                if not source:
+                    report.error("Origem Ruby não reconhecida; use https://rubygems.org.", path, line)
+                elif source.group("url") != "https://rubygems.org":
+                    report.error(f"Origem Ruby não permitida: {source.group('url')}.", path, line)
+
+            for match in GEM_IMPORT.finditer(text):
+                line = text.count("\n", 0, match.start()) + 1
+                report.error("`gemspec` e `eval_gemfile` não são aceitos; declare gems diretamente no Gemfile.", path, line)
+
+            for call in GEM_CALL.finditer(text):
+                match = GEM.match(text, call.start())
+                line = text.count("\n", 0, call.start()) + 1
+                if not match:
+                    report.error("Declaração Ruby não reconhecida; declare o nome literal da gem.", path, line)
+                    continue
+                name, options = match.group("name"), match.group("options")
+                if GEM_SOURCE_OVERRIDE.search(options) or options.rstrip().endswith(","):
+                    report.error(f"Origem ou continuação não permitida para a gem {name}.", path, line)
+                if ("gem", name) not in allowed:
+                    report.error(f"Gem fora da lista permitida: {name}.", path, line)
 
 
 # ---------------------------------------------------------------- regra 2
@@ -215,7 +382,7 @@ def is_protected(path: str, prefixes: list[str]) -> bool:
 
 def check_protected(report: Report, diff: Diff, labels: set[str] | None) -> None:
     prefixes = [line.strip() for line in read_list("guardrails/protected-paths.txt")]
-    touched = sorted(p for p in diff.changed + diff.deleted if is_protected(p, prefixes))
+    touched = sorted(p for p in diff.touched if is_protected(p, prefixes))
     if not touched:
         return
     listing = ", ".join(touched)
@@ -231,31 +398,6 @@ def check_protected(report: Report, diff: Diff, labels: set[str] | None) -> None
 # ---------------------------------------------------------------- regra 3
 
 
-def suppression_scan_text(text: str) -> str:
-    """Ignore leading comment prose while preserving directives and active code."""
-    if re.search(r"\b(swiftlint|swiftformat):", text):
-        return text
-    remaining = text.strip()
-    while remaining.startswith("/*"):
-        depth, position = 1, 2
-        while position < len(remaining) and depth:
-            token = remaining[position:position + 2]
-            if token == "/*":
-                depth += 1
-                position += 2
-            elif token == "*/":
-                depth -= 1
-                position += 2
-            else:
-                position += 1
-        if depth:
-            return ""
-        remaining = remaining[position:].lstrip()
-    if remaining.startswith(("//", "*")):
-        return ""
-    return remaining
-
-
 def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> None:
     patterns = []
     for line in read_list("guardrails/suppression-patterns.txt"):
@@ -263,15 +405,21 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
         patterns.append((re.compile(regex), why.strip()))
 
     prefixes = [line.strip() for line in read_list("guardrails/protected-paths.txt")]
+    views = {}
     hits = []
     for path, line_no, text in diff.added_lines:
         if not path.endswith((".swift", ".m", ".h")) or is_protected(path, prefixes):
             continue
-        # Comentário só conta se for uma diretiva (ex.: swiftlint:disable); citar
-        # `@unchecked Sendable` numa explicação não desliga nada.
-        scan_text = suppression_scan_text(text)
+        if path not in views:
+            _, code, comments = source_views(diff.sources.get(path, text), swift=path.endswith(".swift"))
+            views[path] = code.splitlines(), comments.splitlines()
+        code_lines, comment_lines = views[path]
+        index = line_no - 1
+        code_line = code_lines[index] if 0 <= index < len(code_lines) else text
+        comment_line = comment_lines[index] if 0 <= index < len(comment_lines) else ""
         for regex, why in patterns:
-            if regex.search(scan_text):
+            candidate = comment_line if regex.pattern in {"swiftlint:disable", "swiftformat:disable"} else code_line
+            if regex.search(candidate):
                 hits.append((path, line_no, why, text.strip()))
 
     for path, line_no, why, text in hits:
@@ -294,20 +442,26 @@ def check_suppressions(report: Report, diff: Diff, labels: set[str] | None) -> N
 TEST_DECL = re.compile(r"^\s*(@Test\b|func\s+test\w*\s*\()", re.MULTILINE)
 
 
+def is_test_source(path: str) -> bool:
+    # shortcut: counts declarations in conventional test paths, not compiler discovery; revisit if targets change.
+    parts = Path(path).parts
+    return any(part == "Tests" or part.endswith("Tests") for part in parts[:-1]) or Path(path).stem.endswith("Tests")
+
+
 def count_tests(tree: str | None) -> int:
     """Conta testes em um commit (tree) ou na árvore de trabalho (None)."""
     total = 0
     if tree is None:
         files = git("ls-files", "--cached", "--others", "--exclude-standard").splitlines()
         for path in files:
-            if path.endswith(".swift") and (ROOT / path).exists():
-                total += len(TEST_DECL.findall((ROOT / path).read_text(encoding="utf-8")))
+            if path.endswith(".swift") and is_test_source(path) and (ROOT / path).exists():
+                total += len(TEST_DECL.findall(source_views((ROOT / path).read_text(encoding="utf-8"))[1]))
         return total
     if tree == EMPTY_TREE:
         return 0
     for path in git("ls-tree", "-r", "--name-only", tree).splitlines():
-        if path.endswith(".swift"):
-            total += len(TEST_DECL.findall(git("show", f"{tree}:{path}")))
+        if path.endswith(".swift") and is_test_source(path):
+            total += len(TEST_DECL.findall(source_views(git("show", f"{tree}:{path}"))[1]))
     return total
 
 

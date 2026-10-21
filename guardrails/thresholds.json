@@ -1,7 +1,7 @@
 {
   "_comment": "CI minimums. They only go up: start near the current value and raise gradually.",
   "min_line_coverage": 0.50,
-  "coverage_excluded_targets": ["ClaraTestSupport", "ClaraDesignSystem", "ClaraLegacy"],
-  "_comment_excluded_files": "SwiftUI screens: covered by snapshot and UI tests, not unit tests. Logic (view models, coordinators, routers, builders) still counts.",
-  "coverage_excluded_files": ["TodayView.swift", "TodaySheets.swift", "ConsultationView.swift", "MomentFormView.swift"]
+  "coverage_excluded_targets": ["ClaraTestSupport"],
+  "_comment_excluded_files": "All production files, including SwiftUI screens and components, count toward coverage.",
+  "coverage_excluded_files": []
 }

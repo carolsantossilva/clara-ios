@@ -35,10 +35,6 @@ function_body_length:
 cyclomatic_complexity:
   ignores_case_statements: true
 
-# The VIP models use namespaces (Records.Load.Response).
-nesting:
-  type_level: 3
-
 file_length:
   warning: 500
 

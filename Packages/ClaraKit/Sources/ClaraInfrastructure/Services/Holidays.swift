@@ -38,7 +38,7 @@ public actor BrasilAPIHolidayService: HolidayProviding {
     }
 
     public func upcomingHoliday(from day: LocalDay, within days: Int) async throws -> Holiday? {
-        let end = day.adding(days: days)
+        let end = try day.adding(days: days)
         let holidays: [Holiday]
         if end.year == day.year {
             holidays = try await self.holidays(year: day.year)

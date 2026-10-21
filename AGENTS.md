@@ -13,10 +13,9 @@ Clara é um app iOS nativo (Swift, iOS 17+) que ajuda a escolher um próximo pas
 distrações e reunir registros pessoais para uma consulta. Projeto gerado com XcodeGen
 (`project.yml`); o código fica num pacote SPM local, `Packages/ClaraKit`, com um target por módulo.
 
-- `ClaraCore` não depende de nada. As features (`TodayFeature`, `RecordsFeature`,
-  `ConsultationFeature`) **nunca importam umas às outras**.
+- `ClaraCore` não depende de nada. As features (`ClaraUI`) **nunca importam umas às outras**.
 - Dependências concretas só são montadas no app (`App/AppEnvironment.swift`, o composition root).
-- Hoje = SwiftUI + MVVM-C · Registros = UIKit View Code + VIP · Consulta = SwiftUI + MVVM.
+- As três abas usam SwiftUI + MVVM.
   Siga o padrão da feature que você está mexendo (ver `docs/adr/0002`).
 - Swift 6 toolchain, modo de linguagem 5 com concorrência estrita: ViewModels são `@MainActor`,
   estado compartilhado mutável fica em `actor`.

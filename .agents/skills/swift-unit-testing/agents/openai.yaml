@@ -1,0 +1,3 @@
+interface:
+  display_name: "Swift Unit Testing"
+  short_description: "Write deterministic ClaraKit tests"

@@ -4,8 +4,10 @@
 # Um prefixo terminado em "/" cobre a pasta inteira.
 .github/
 .claude/
+.codex/
 guardrails/
 scripts/guardrails/
+scripts/agent-hooks/
 scripts/git-hooks/
 scripts/ci/
 .swiftlint.yml

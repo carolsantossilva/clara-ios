@@ -1,0 +1,17 @@
+{
+  "description": "Guardrail hooks shared with Claude Code (scripts/agent-hooks/guard.py). Loaded only when the project is trusted.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$(git rev-parse --show-toplevel)/scripts/agent-hooks/guard.py\" stop codex",
+            "timeout": 300,
+            "statusMessage": "Running policies and SwiftLint"
+          }
+        ]
+      }
+    ]
+  }
+}

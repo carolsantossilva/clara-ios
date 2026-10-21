@@ -11,13 +11,32 @@ xcuserdata/
 
 # Fastlane
 fastlane/report.xml
+fastlane/Preview.html
 fastlane/test_output/
 fastlane/README.md
 *.ipa
 *.dSYM.zip
+*.dSYM/
 
 .DS_Store
 vendor/
+
+# Cache e bytecode do Python
+__pycache__/
+*.py[cod]
+
+# Ambientes e caches de ferramentas Python
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Relatórios de cobertura Python
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
 
 # Saídas de build do CI e ferramentas locais
 build/

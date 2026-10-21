@@ -1,9 +1,9 @@
-# Teste de mutação (Muter): introduz bugs de propósito no código e confere se
-# algum teste falha. Mutante que sobrevive = teste que cobre o código mas não
-# verifica nada (problema comum em testes escritos por IA).
-# É lento: roda toda semana e sob demanda, não bloqueia PRs. O relatório fica
-# como artefato. Experimental: o Muter não tem release desde 2023.
-name: Mutação
+# Mutation testing (Muter): introduces bugs into the code on purpose and checks
+# that some test fails. A surviving mutant = a test that covers the code but
+# verifies nothing (a common problem in AI-written tests).
+# It is slow: runs weekly and on demand, and does not block PRs. The report is
+# kept as an artifact. Experimental: Muter has had no release since 2023.
+name: Mutation
 
 on:
   schedule:
@@ -25,16 +25,16 @@ jobs:
           persist-credentials: false
       - run: scripts/ci/install-tools.sh xcodegen
       - run: xcodegen generate
-      - name: Instalar o Muter
+      - name: Install Muter
         run: brew install muter-mutation-testing/formulae/muter
-      - name: Rodar
+      - name: Run
         run: |
           mkdir -p build
-          # Só a regra de negócio (ClaraCore): é onde um teste fraco custa mais caro.
+          # Business rules only (ClaraCore): that is where a weak test costs the most.
           files=$(ls Packages/ClaraKit/Sources/ClaraCore/*.swift | paste -sd, -)
           muter run --skip-coverage --files-to-mutate "$files" --format html --output build/muter.html
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mutacao
+          name: mutation
           path: build/muter.*
           retention-days: 30

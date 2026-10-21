@@ -63,7 +63,7 @@ class TrustedPolicyTests(unittest.TestCase):
         self.write('guardrails/allowed-dependencies.txt', 'swift https://example.invalid/evil\n')
         result = self.invoke('["guardrails-change"]')
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('fora da lista', result.stderr)
+        self.assertIn('not in the allow-list', result.stderr)
 
     def test_suppression_list_cannot_be_cleared_in_proposal(self):
         self.write('guardrails/suppression-patterns.txt', '')
@@ -97,7 +97,7 @@ class TrustedPolicyTests(unittest.TestCase):
         result = subprocess.run(['python3', str(RUNNER), '--base', self.base, '--head', head],
                                 cwd=self.root, capture_output=True, text=True)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('fora da lista', result.stderr)
+        self.assertIn('not in the allow-list', result.stderr)
 
     def test_clean_change_passes(self):
         self.write('README.md', 'hello\n')

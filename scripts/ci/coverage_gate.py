@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Falha se a cobertura de linhas dos módulos ficar abaixo do mínimo.
+"""Fails if the modules' line coverage drops below the minimum.
 
-Uso: coverage_gate.py <Resultado.xcresult>
-Lê o mínimo, os targets e os arquivos ignorados de guardrails/thresholds.json.
+Usage: coverage_gate.py <Result.xcresult>
+Reads the minimum, the ignored targets and the ignored files from guardrails/thresholds.json.
 """
 import json
 import subprocess
@@ -34,13 +34,13 @@ for target in report.get("targets", []):
     rows.append((name, target_covered / target_executable if target_executable else 0.0))
 
 if excluded_files:
-    print(f"Arquivos fora do cálculo: {', '.join(sorted(excluded_files))}")
+    print(f"Files left out: {', '.join(sorted(excluded_files))}")
 for name, value in sorted(rows):
     print(f"  {name:<28} {value:6.1%}")
 if executable == 0:
-    sys.exit("Nenhuma linha de código coberta encontrada no relatório.")
+    sys.exit("No covered code lines found in the report.")
 total = covered / executable
-print(f"Cobertura total: {total:.1%} (mínimo {minimum:.0%})")
+print(f"Total coverage: {total:.1%} (minimum {minimum:.0%})")
 if total < minimum:
-    print(f"::error::Cobertura {total:.1%} abaixo do mínimo de {minimum:.0%}. Escreva testes; não baixe o limite.")
+    print(f"::error::Coverage {total:.1%} is below the {minimum:.0%} minimum. Write tests; do not lower the threshold.")
     sys.exit(1)

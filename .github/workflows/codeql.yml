@@ -1,7 +1,7 @@
-# Análise de segurança do código (SAST) com CodeQL.
-# - Swift: precisa compilar, por isso roda em macOS.
-# - actions: analisa os próprios workflows (injeção de script, permissões excessivas).
-# A regra da main bloqueia o merge se houver alerta de severidade alta ou maior.
+# Code security analysis (SAST) with CodeQL.
+# - Swift: needs a build, so it runs on macOS.
+# - actions: analyzes the workflows themselves (script injection, excessive permissions).
+# The main rule blocks the merge on any alert of high severity or above.
 name: CodeQL
 
 on:
@@ -34,7 +34,7 @@ jobs:
           echo "package=$([[ -f Packages/ClaraKit/Package.swift ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
   actions:
-    name: Analisar workflows
+    name: Analyze workflows
     runs-on: ubuntu-24.04
     permissions:
       security-events: write
@@ -53,7 +53,7 @@ jobs:
           category: /language:actions
 
   swift:
-    name: Analisar Swift
+    name: Analyze Swift
     needs: detect
     if: needs.detect.outputs.app == 'true' || needs.detect.outputs.package == 'true'
     runs-on: macos-26
@@ -82,7 +82,7 @@ jobs:
         env:
           APP: ${{ needs.detect.outputs.app }}
         run: |
-          # Com o app: compila o projeto. Antes dele: compila só o pacote.
+          # With the app: build the project. Before it exists: build only the package.
           if [[ "$APP" == "true" ]]; then target=(-project Clara.xcodeproj -scheme Clara); \
           else cd Packages/ClaraKit; target=(-scheme ClaraKit-Package); fi
           xcodebuild build "${target[@]}" \

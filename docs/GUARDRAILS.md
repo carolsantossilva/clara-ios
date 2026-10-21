@@ -1,108 +1,108 @@
-# Guardrails para código gerado por IA
+# Guardrails for AI-generated code
 
-Grande parte deste repositório foi escrita com ajuda de IA. Em vez de confiar no texto gerado,
-o repositório trata todo código como **não confiável até passar por verificações automáticas**
-que a IA não consegue desligar. Os guardrails vieram **antes** do código do app: o primeiro
-commit tem só eles, e o app entrou por PR, passando por todas as barreiras.
+Much of this repository was written with AI assistance. Instead of trusting generated text, the
+repository treats all code as **untrusted until it passes automated checks** that the AI cannot
+turn off. The guardrails came **before** the app code: the first commit holds only them, and the
+app came in through PRs, going through every barrier.
 
-## Por quê
+## Why
 
-- Instruções para a IA ("rode os testes", "escreva código seguro") são pedidos, não garantias.
-- Levantamentos de 2025–2026 encontram mais problemas, e mais problemas de segurança, em PRs
-  gerados por IA do que em PRs humanos.
-- Falhas típicas de código gerado: dependências que não existem (ou com nome parecido com o
-  original, o *slopsquatting*), testes que cobrem o código sem verificar nada, e "consertar" um
-  check desligando a regra.
+- Instructions to the AI ("run the tests", "write secure code") are requests, not guarantees.
+- 2025–2026 surveys find more issues, and more security issues, in AI-generated PRs than in
+  human ones.
+- Typical failures of generated code: dependencies that do not exist (or with a name similar to
+  the original, *slopsquatting*), tests that cover code without verifying anything, and "fixing"
+  a check by turning the rule off.
 
-## As camadas
+## The layers
 
-| # | Camada | Onde | O que faz | Força |
+| # | Layer | Where | What it does | Strength |
 |---|---|---|---|---|
-| 1 | Instruções | `AGENTS.md`, `CLAUDE.md` | Arquitetura, regras do produto, como trabalhar, o que nunca fazer | Orienta |
-| 2 | Hooks do Claude Code | `.claude/settings.json`, `.claude/hooks/guard.py` | Nega edição de guardrails e comandos que contornam checks; pede confirmação para supressões; roda políticas + SwiftLint antes de encerrar | Bloqueia a IA local |
-| 3 | Hooks do git | `scripts/git-hooks/pre-commit` | Segredos (gitleaks), políticas, SwiftLint nos arquivos do commit, sem commit na `main` | Bloqueia qualquer commit local |
-| 4 | CI | `.github/workflows/` | Conventional Commits PR title, políticas, segredos no histórico, revisão de dependências, lint, build com warnings como erro, testes unitários/snapshot/UI, cobertura mínima, fluxos Maestro, CodeQL | Bloqueia o merge |
-| 5 | GitHub | Regras da `main`, configurações | Só entra por PR com "CI OK" verde, sem alerta CodeQL alto, sem force push; secret scanning com push protection; Dependabot | Ninguém contorna sem querer |
-| 6 | Acompanhamento | Scorecard, Mutação | Nota pública de boas práticas; teste de mutação semanal no `ClaraCore` | Mede |
+| 1 | Instructions | `AGENTS.md`, `CLAUDE.md` | Architecture, product rules, how to work, what never to do | Guides |
+| 2 | Claude Code hooks | `.claude/settings.json`, `.claude/hooks/guard.py` | Deny edits to guardrails and commands that bypass checks; ask for confirmation on suppressions; run policies + SwiftLint before stopping | Blocks the local AI |
+| 3 | Git hooks | `scripts/git-hooks/pre-commit` | Secrets (gitleaks), policies, SwiftLint on committed files, no commits on `main` | Blocks any local commit |
+| 4 | CI | `.github/workflows/` | Conventional Commits PR title, policies, secrets in history, dependency review, lint, build with no compiler warnings, unit/snapshot/UI tests, minimum coverage, Maestro flows, CodeQL | Blocks the merge |
+| 5 | GitHub | `main` rules, settings | Only PRs with a green "CI OK", no high CodeQL alert, no force push; secret scanning with push protection; Dependabot | Nobody bypasses by accident |
+| 6 | Monitoring | Scorecard, Mutation | Public best-practices score; weekly mutation testing on `ClaraCore` | Measures |
 
-### Políticas (`scripts/guardrails/policy_check.py`)
+### Policies (`scripts/guardrails/policy_check.py`)
 
-| Regra | Sem label | Para liberar |
+| Rule | Without a label | To allow it |
 |---|---|---|
-| Dependência fora de `guardrails/allowed-dependencies.txt`, ou pacote Swift sem versão exata | ❌ falha | Uma pessoa confere e edita a lista (que é protegida) |
-| Mudança em arquivo de `guardrails/protected-paths.txt` | ❌ falha | Label `guardrails-change` |
-| Supressão nova (`swiftlint:disable`, `@unchecked Sendable`, `try!`, teste desativado, snapshot regravado...) | ❌ falha | Label `guardrail-exception` + justificativa no PR |
-| Número de testes diminuiu | ❌ falha | Label `guardrail-exception` |
+| Dependency missing from `guardrails/allowed-dependencies.txt`, or Swift package without an exact version | ❌ fails | A person checks it and edits the list (which is protected) |
+| Change to a file in `guardrails/protected-paths.txt` | ❌ fails | Label `guardrails-change` |
+| New suppression (`swiftlint:disable`, `@unchecked Sendable`, `try!`, disabled test, re-recorded snapshot...) | ❌ fails | Label `guardrail-exception` + justification in the PR |
+| Number of tests went down | ❌ fails | Label `guardrail-exception` |
 
-No CI, alterações somente em Markdown na raiz ou em prosa/imagens raster dentro de `docs/`
-podem pular Maestro. Qualquer outro caminho desconhecido mantém os fluxos. PRs executam
-todos os fluxos, exceto os marcados com a tag Maestro `full`; os fluxos sem tag continuam
-incluídos como smoke. A execução semanal e `workflow_dispatch` executam a suíte inteira.
-Assim, um fluxo novo entra no smoke automaticamente e só sai dele quando alguém o marca
-explicitamente como `full`.
-Flows `full` podem falhar sem bloquear o PR e a falha pode aparecer só na validação manual de
-release; rode `workflow_dispatch` antes de uma release para validar a suíte completa.
+In CI, only root-level Markdown changes or prose and raster images under `docs/` may skip
+Maestro. Any other unknown path keeps the flows enabled. PRs run every flow except those
+tagged `full`; untagged flows remain in the smoke suite. The weekly run and
+`workflow_dispatch` run the full suite. New flows therefore enter the smoke suite
+automatically and leave it only when someone explicitly marks them `full`.
+`full` flows can fail without blocking a PR, so a failure may only appear in the manual
+release validation; run `workflow_dispatch` before a release to validate the full suite.
 
-Labels são decisão humana: os hooks impedem a IA de adicioná-los.
+Labels are a human decision: the hooks stop the AI from adding them.
 
-Ao adicionar ou remover labels, o CI reavalia as políticas com os labels atuais sem
-repetir os jobs macOS. O "CI OK" exige a validação do código de uma execução do mesmo
-workflow, PR e commit de merge; resultados falhos, cancelados ou ainda pendentes não
-servem. Labels não cancelam a execução de código em andamento. Se não houver validação
-válida, reexecute a execução de código (opened/synchronize/reopened), ou aguarde seu
-fim e reexecute o CI do label. Antes de aprovar o resultado, toda execução consulta
-novamente os labels atuais para evitar aceitar uma exceção removida durante os testes.
+When labels are added or removed, CI reevaluates policies with the current labels without
+rerunning macOS jobs. "CI OK" requires code validation from the same workflow, PR and
+merge commit; failed, cancelled or pending results do not count. Label changes do not
+cancel code validation in progress. If no valid validation exists, rerun the code event
+(`opened`/`synchronize`/`reopened`), or wait for it to finish and rerun the label event.
+Before approving a result, each run checks the current labels again so it cannot accept
+an exception removed during testing.
 
-### Origem confiável das políticas
+### Trusted policy source
 
-O CI executa o verificador Python e lê as listas de regras da revisão base, nunca da
-proposta. Os manifests e o diff da proposta são lidos como dados do Git, sem checkout,
-build ou import dos arquivos propostos na avaliação de políticas. Esvaziar a lista de
-proteção ou substituir o verificador no PR não muda a decisão dessa avaliação.
+CI runs the Python checker and reads rule lists from the base revision, never from the
+proposal. It reads proposed manifests and diffs as Git data without checking out,
+building or importing proposed files during policy evaluation. Clearing the protection
+list or replacing the checker in a PR does not change that evaluation.
 
-Isso também vale para a lista de dependências: uma nova biblioteca exige primeiro um
-PR humano que aprove a lista e seja incorporado à base; só depois o PR que a utiliza.
-O label `guardrails-change` autoriza a mudança protegida, mas não libera dependências
-que ainda estejam fora da lista da base.
+The same applies to the dependency list: a human must first approve and merge a PR that
+updates the list; only then can a PR use the new library. The `guardrails-change` label
+allows a protected-file change but does not allow dependencies missing from the base list.
 
-O workflow `trusted-policy.yml`, disparado por `pull_request_target`, usa somente o
-código da base e token de leitura. Ele busca os objetos Git da proposta sem checkout
-e consulta os labels atuais antes da avaliação. Build e testes continuam no evento
-`pull_request`, fora desse contexto. Referência: [orientação de segurança do GitHub](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
+The `trusted-policy.yml` workflow, triggered by `pull_request_target`, uses only base
+code and a read-only token. It fetches proposed Git objects without checking out the
+proposal and checks current labels before evaluating policy. Builds and tests remain in
+the `pull_request` event, outside that context. See [GitHub's security guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target).
 
-**Limite:** o workflow comum e o nome `CI OK` ainda podem ser modificados num PR.
-Para tornar a avaliação independente uma barreira obrigatória contra workflows
-hostis, uma pessoa precisa configurar uma regra externa que exija o workflow
-confiável. Um check obrigatório apenas pelo nome não garante sua origem. Esta
-mudança não altera rulesets, labels ou configurações do GitHub.
+**Limit:** the regular workflow and the `CI OK` check name can still be changed in a PR.
+To make independent evaluation a required barrier against hostile workflows, a person
+must configure an external rule requiring the trusted workflow. A required check by
+name alone does not prove its origin. This change does not alter rulesets, labels or
+GitHub settings.
 
-### Cadeia de suprimentos
+### Supply chain
 
-- Actions fixadas pelo SHA do commit (uma tag pode ser movida para código malicioso).
-- Ferramentas do CI baixadas com versão fixa e checksum (`scripts/ci/install-tools.sh`).
-- `GITHUB_TOKEN` só com leitura; checkout sem guardar credenciais; `harden-runner` audita a rede nos jobs Linux.
-- Dependabot com espera de 14 dias antes de propor uma versão nova.
-- Lista de dependências permitidas + versões exatas.
+- Actions pinned by commit SHA (a tag can be moved to malicious code).
+- CI tools downloaded at a fixed version with a checksum (`scripts/ci/install-tools.sh`).
+- Read-only `GITHUB_TOKEN`; checkout without stored credentials; `harden-runner` audits network
+  traffic on Linux jobs.
+- Dependabot waits 14 days before proposing a new version.
+- Allow-list of dependencies + exact versions.
 
-## Como usar no dia a dia
+## Day to day
 
 ```bash
-scripts/install-git-hooks.sh       # uma vez por clone
+scripts/install-git-hooks.sh       # once per clone
 brew install gitleaks swiftlint    # macOS
 ```
 
-- Trabalhe numa branch e abra PR. O merge é sempre seu.
-- Para mudar um guardrail de propósito: edite você mesma, ou inicie o Claude Code com
-  `CLARA_GUARDRAILS_UNLOCK=1 claude`. O PR vai precisar do label `guardrails-change`.
+- Work on a branch and open a PR. The merge is always yours.
+- To change a guardrail on purpose: edit it yourself, or start Claude Code with
+  `CLARA_GUARDRAILS_UNLOCK=1 claude`. The PR will need the `guardrails-change` label.
 
-## Limites conhecidos (honestidade)
+## Known limits (honesty)
 
-- Os hooks do Claude Code usam heurísticas (expressões regulares). Pegam o caso comum, não um
-  agente decidido a burlar. A barreira definitiva é o CI + regras da `main`.
-- Como o repositório tem uma pessoa só, não dá para exigir aprovação de outra pessoa no PR
-  (o GitHub não deixa aprovar o próprio PR). A segurança fica nos checks obrigatórios e na leitura
-  do diff, registrada no template de PR.
-- Cobertura e mutação medem testes, não corretude. O limite de cobertura começa conservador e só sobe.
-- O Muter não tem release desde 2023; o job de mutação é experimental e não bloqueia PRs.
-- Imagens de snapshot podem variar entre Intel (VM local) e Apple Silicon (CI); o CI fixa o mesmo
-  Xcode da VM e os testes usam tolerância de precisão.
+- The Claude Code hooks use heuristics (regular expressions). They catch the common case, not an
+  agent determined to get around them. The definitive barrier is CI + the `main` rules.
+- With a single person on the repository, approval from someone else cannot be required (GitHub
+  does not let you approve your own PR). Safety rests on the required checks and on reading the
+  diff, recorded in the PR template.
+- Coverage and mutation measure tests, not correctness. The coverage threshold starts
+  conservative and only goes up.
+- Muter has had no release since 2023; the mutation job is experimental and does not block PRs.
+- Snapshot images can differ between Intel (local VM) and Apple Silicon (CI); CI pins the same
+  Xcode as the VM and the tests use a precision tolerance.

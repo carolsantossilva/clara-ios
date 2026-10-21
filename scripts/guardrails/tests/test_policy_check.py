@@ -192,7 +192,7 @@ let multiline = """
                                 cwd=self.root, text=True, capture_output=True,
                                 env={**os.environ, "GITHUB_ACTIONS": "false"})
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn("fora da lista permitida", result.stderr)
+        self.assertIn("not in the allow-list", result.stderr)
 
     def test_staged_reads_index_instead_of_clean_worktree(self):
         for path, unsafe, safe in (

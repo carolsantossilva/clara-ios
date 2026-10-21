@@ -50,15 +50,17 @@ public final class ConsultationViewModel {
 
     // MARK: Derived state (recomputed on every read; cheap for dozens of records)
 
-    var startDay: LocalDay { LocalDay(startDate, in: .current) }
-    var endDay: LocalDay { LocalDay(endDate, in: .current) }
+    var startDay: LocalDay? { LocalDay(startDate, in: .current) }
+    var endDay: LocalDay? { LocalDay(endDate, in: .current) }
 
     public var eligible: [Moment] {
-        ReportBuilder.eligible(start: startDay, end: endDay, in: moments)
+        guard let startDay, let endDay else { return [] }
+        return ReportBuilder.eligible(start: startDay, end: endDay, in: moments)
     }
 
-    public var report: ReportDocument {
-        ReportBuilder.build(
+    public var report: ReportDocument? {
+        guard let startDay, let endDay else { return nil }
+        return ReportBuilder.build(
             ReportSelection(start: startDay, end: endDay, momentIDs: selectedIDs, questionsAndNotes: questions),
             from: moments
         )
@@ -108,10 +110,14 @@ public final class ConsultationViewModel {
     }
 
     public func exportPDF() {
-        let document = report
-        let html = ReportHTMLRenderer.render(document, preparedAt: dependencies.now())
-        let fileName = "resumo-consulta-\(document.start)-a-\(document.end).pdf"
+        guard let document = report else {
+            exportedFileURL = nil
+            alert = AlertContent(title: "Não foi possível preparar o PDF", message: "Escolha datas válidas para o período.")
+            return
+        }
         do {
+            let html = try ReportHTMLRenderer.render(document, preparedAt: dependencies.now())
+            let fileName = "resumo-consulta-\(document.start)-a-\(document.end).pdf"
             exportedFileURL = try dependencies.exporter.exportPDF(html: html, fileName: fileName)
             dependencies.analytics.track(.reportExported(entries: document.entries.count))
         } catch {

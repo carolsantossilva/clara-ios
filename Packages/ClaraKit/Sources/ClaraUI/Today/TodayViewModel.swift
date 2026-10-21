@@ -13,7 +13,7 @@ import os
 @Observable
 public final class TodayViewModel {
     public private(set) var tasks: [FocusTask] = []
-    public private(set) var parkingNotes: [ParkingNote] = []
+    public private(set) var parkingNotes: [Distraction] = []
     public private(set) var focusID: UUID?
     public private(set) var isLoading = true
     public private(set) var upcomingHoliday: Holiday?
@@ -81,7 +81,10 @@ public final class TodayViewModel {
     }
 
     func loadHoliday() async {
-        let today = LocalDay(dependencies.now(), in: .current)
+        guard let today = LocalDay(dependencies.now(), in: .current) else {
+            upcomingHoliday = nil
+            return
+        }
         // The holiday is a nice-to-have: if the network fails, the screen goes on without it, no alert.
         upcomingHoliday = try? await dependencies.holidays.upcomingHoliday(from: today, within: 7)
         if upcomingHoliday != nil {
@@ -180,7 +183,7 @@ public final class TodayViewModel {
         }
     }
 
-    public func completeParkingNote(_ note: ParkingNote) async {
+    public func completeParkingNote(_ note: Distraction) async {
         do {
             try await dependencies.parking.complete(id: note.id)
             await load()

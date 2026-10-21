@@ -17,8 +17,8 @@ public struct ConsultationView: View {
                     subtitle: "Um resumo fiel às suas palavras, sem tirar conclusões por você."
                 )
                 selectionCard
-                if viewModel.isPreviewing {
-                    ReportPreview(viewModel: viewModel)
+                if viewModel.isPreviewing, let report = viewModel.report {
+                    ReportPreview(viewModel: viewModel, report: report)
                 }
             }
             .padding(.horizontal, ClaraSpacing.large)
@@ -113,9 +113,9 @@ private struct SelectableMomentRow: View {
 /// A faithful preview of what goes into the PDF: same words, same order.
 private struct ReportPreview: View {
     let viewModel: ConsultationViewModel
+    let report: ReportDocument
 
     var body: some View {
-        let report = viewModel.report
         VStack(alignment: .leading, spacing: ClaraSpacing.medium) {
             HStack {
                 SectionHeader(eyebrow: "Prévia do seu resumo", title: "Antes de exportar")

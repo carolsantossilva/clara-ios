@@ -1,0 +1,20 @@
+appId: app.clara.ios
+name: Consultation shows the summary preview
+---
+- launchApp:
+    clearState: true
+    arguments:
+      "-ui-testing": true
+- tapOn: "Consulta"
+- scrollUntilVisible:
+    element:
+      id: "consultation.preview"
+    direction: DOWN
+- tapOn:
+    id: "consultation.preview"
+- scrollUntilVisible:
+    element:
+      id: "consultation.export"
+    direction: DOWN
+- assertVisible:
+    id: "consultation.export"

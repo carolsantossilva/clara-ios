@@ -4,6 +4,10 @@ A native iOS app for choosing a next step, parking distractions and preparing pe
 
 The interface is in Brazilian Portuguese. Code and documentation are in English. iOS 17+.
 
+## Context
+
+Sometimes it is hard to pick where to start, stay on the important task or return to it after an interruption. It can also be hard to remember, at an appointment, which moments were good or difficult and what was happening. Clara helps start and resume one task at a time and keeps the user's own notes ready to bring to an appointment, with or without an ADHD diagnosis. It does not diagnose, score symptoms or interpret mood, and the user's data never leaves the device.
+
 <p>
   <img src="docs/screenshots/today.png" width="230" alt="Choosing a focus task and session duration" />
   <img src="docs/screenshots/records.png" width="230" alt="Personal records in the timeline" />
@@ -45,7 +49,13 @@ On-device generative suggestions require iOS 26 and a device with Apple Intellig
 - **Faithful reports.** Selection respects the local day of each record, including its original time zone. Export preserves the user's words and escapes text before rendering HTML as PDF.
 - **Privacy.** Task and record content is never sent to a server. Optional local usage events contain only action metadata. The user chooses whether and with whom to share an exported PDF. The app makes no clinical interpretations.
 
-The current scope is a small personal app. JSON storage is adequate for this volume; large histories and schema migrations would need further work. The timer counts while the app is active; background countdown recovery is not implemented.
+## Limitations and next steps
+
+- **Storage.** JSON storage fits a small personal app. Large histories and schema migrations would need further work.
+- **Timer.** It counts while the app is active; background countdown recovery is not implemented.
+- **Branch.** This branch (`entrega`) is the delivered version. The same work is also split into stacked pull requests into `main`, which are still in CI.
+- **CI time.** The CodeQL Swift build spends ~8 of its ~12 minutes evaluating `Package.swift` under the tracer. A fix that skips the manifest was measured on a local Mac (156 s → 17 s, same 33 source files extracted) and is being validated in CI.
+- **UI tests.** XCUITest runs on every pull request. Moving it to the weekly run would need more unit tests in `ClaraUI`, because total coverage drops to 40% (below the 50% gate) without it.
 
 ## Repository
 

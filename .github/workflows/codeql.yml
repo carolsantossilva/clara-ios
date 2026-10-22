@@ -73,18 +73,11 @@ jobs:
       - run: scripts/ci/install-tools.sh xcodegen
       - if: needs.detect.outputs.app == 'true'
         run: xcodegen generate
-      # Antes do init, fora do rastreador: sob ele, avaliar o Package.swift levava
-      # ~8 min. O Build reaproveita o resultado no mesmo derivedDataPath.
-      - name: Resolve packages
-        env:
-          APP: ${{ needs.detect.outputs.app }}
-        run: |
-          if [[ "$APP" == "true" ]]; then target=(-project Clara.xcodeproj -scheme Clara); \
-          else cd Packages/ClaraKit; target=(-scheme ClaraKit-Package); fi
-          xcodebuild -resolvePackageDependencies "${target[@]}" \
-            -derivedDataPath "$GITHUB_WORKSPACE/build/dd" \
-            -skipMacroValidation
+      # O rastreador ignora a compilação dos Package.swift (macOS, não é código do app):
+      # extraí-la levava ~8 min. As demais compilações seguem para o extrator Swift.
       - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        env:
+          CODEQL_ACTION_EXTRA_OPTIONS: '{"database":{"init":["--extra-tracing-config=${{ github.workspace }}/.github/codeql/skip-swiftpm-manifests.lua"]}}'
         with:
           languages: swift
           build-mode: manual

@@ -1,16 +1,24 @@
 """Keep the traced CodeQL Swift build limited to compiling the sources."""
 from pathlib import Path
+import json
 import re
 import unittest
 
 
 ROOT = Path(__file__).resolve().parents[3]
 TEXT = (ROOT / ".github/workflows/codeql.yml").read_text()
+TRACING_CONFIG = ".github/codeql/skip-swiftpm-manifests.lua"
 
 
 def step(name):
     match = re.search(rf"^      - name: {name}\n(.*?)(?=^      - )", TEXT, re.M | re.S)
     return match.group(1) if match else None
+
+
+def swift_init_step():
+    swift = TEXT[TEXT.index("\n  swift:\n"):]
+    match = re.search(r"^      - uses: github/codeql-action/init@.*?(?=^      - )", swift, re.M | re.S)
+    return match.group(0) if match else None
 
 
 class CodeQLBuildTests(unittest.TestCase):
@@ -20,20 +28,29 @@ class CodeQLBuildTests(unittest.TestCase):
         self.assertIn('-destination "generic/platform=iOS Simulator"', build)
         self.assertRegex(build, r"(?m)^\s+ARCHS=arm64 \\$")
 
-    def test_packages_resolve_before_the_tracer_into_the_build_derived_data(self):
-        resolve, build = step("Resolve packages"), step("Build")
-        self.assertIsNotNone(resolve, "CodeQL Swift job has no step named Resolve packages")
-        swift = TEXT[TEXT.index("\n  swift:\n"):]
-        self.assertLess(swift.index("      - name: Resolve packages\n"),
-                        swift.index("github/codeql-action/init@"))
-        self.assertIn("xcodebuild -resolvePackageDependencies", resolve)
-        for line in ('if [[ "$APP" == "true" ]]; then target=(-project Clara.xcodeproj -scheme Clara); \\',
-                     "else cd Packages/ClaraKit; target=(-scheme ClaraKit-Package); fi",
-                     '-derivedDataPath "$GITHUB_WORKSPACE/build/dd"',
-                     "APP: ${{ needs.detect.outputs.app }}"):
-            with self.subTest(line=line):
-                self.assertIn(line, resolve)
-                self.assertIn(line, build)
+    def test_tracer_skips_swiftpm_manifests_through_an_extra_config(self):
+        init = swift_init_step()
+        self.assertIsNotNone(init, "CodeQL Swift job has no init step")
+        self.assertIn("languages: swift", init)
+        match = re.search(r"^          CODEQL_ACTION_EXTRA_OPTIONS: '(.*)'$", init, re.M)
+        self.assertIsNotNone(match, "Swift init does not set CODEQL_ACTION_EXTRA_OPTIONS")
+        options = json.loads(match.group(1))
+        self.assertEqual(options, {"database": {"init": [
+            f"--extra-tracing-config=${{{{ github.workspace }}}}/{TRACING_CONFIG}"]}})
+
+    def test_extra_config_only_prepends_a_manifest_matcher_to_swift(self):
+        config = (ROOT / TRACING_CONFIG).read_text()
+        self.assertIn("function GetCompatibleVersions()\n    return { '1.0.0' }", config)
+        self.assertIn("GetRegisteredMatchers('swift')", config)
+        self.assertIn("return { swift = matchers }", config)
+        self.assertIn("compilerName ~= 'swift-frontend'", config)
+        self.assertIn("'-apple-macos'", config)
+        self.assertIn("'/Package[^/]*%.swift$'", config)
+        self.assertIn("return macOSTarget and manifest", config)
+        self.assertNotIn("invocation =", config)
+
+    def test_build_has_no_separate_package_resolution(self):
+        self.assertIsNone(step("Resolve packages"))
 
 
 if __name__ == "__main__":

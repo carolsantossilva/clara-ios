@@ -6,7 +6,7 @@ The interface is in Brazilian Portuguese. Code and documentation are in English.
 
 ## Context
 
-Sometimes it is hard to pick where to start, stay on the important task or return to it after an interruption. It can also be hard to remember, at an appointment, which moments were good or difficult and what was happening. Clara helps start and resume one task at a time and keeps the user's own notes ready to bring to an appointment, with or without an ADHD diagnosis. It does not diagnose, score symptoms or interpret mood, and the user's data never leaves the device.
+Sometimes it is hard to pick where to start, stay on the important task or return to it after an interruption. It can also be hard to remember, at an appointment, which moments were good or difficult and what was happening. Clara helps start and resume one task at a time and keeps the user's own notes ready to bring to an appointment, with or without an ADHD diagnosis. It does not diagnose, score symptoms or interpret mood, and the user's data is never sent to a server; it only leaves the device when the user shares an exported PDF.
 
 <p>
   <img src="docs/screenshots/today.png" width="230" alt="Choosing a focus task and session duration" />

@@ -33,7 +33,7 @@ jobs:
           # Business rules only (ClaraCore): that is where a weak test costs the most.
           files=$(ls Packages/ClaraKit/Sources/ClaraCore/*.swift | paste -sd, -)
           muter run --skip-coverage --files-to-mutate "$files" --format html --output build/muter.html
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mutation
           path: build/muter.*

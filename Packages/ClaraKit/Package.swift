@@ -12,7 +12,7 @@ let package = Package(
         .library(name: "ClaraUI", targets: ["ClaraUI"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", exact: "1.19.5"),
+        .package(url: "https://github.com/pointfreeco/swift-snapshot-testing", exact: "1.19.6"),
     ],
     targets: [
         .target(
